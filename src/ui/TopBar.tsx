@@ -2,27 +2,20 @@ import { UIState } from './types'
 
 interface TopBarProps {
   state: UIState
-  onTogglePause: () => void
   onSetSpeed: (speed: 0 | 1 | 2) => void
 }
 
-function TopBar({ state, onTogglePause, onSetSpeed }: TopBarProps) {
+function TopBar({ state, onSetSpeed }: TopBarProps) {
   return (
     <div style={styles.container}>
       <div style={styles.section}>
-        <button
-          onClick={onTogglePause}
-          style={styles.button}
-        >
-          {state.timeScale === 0 ? '▶️' : '⏸'}
-        </button>
-        <button onClick={() => onSetSpeed(0)} style={styles.speedButton}>
+        <button onClick={() => onSetSpeed(0)} style={{...styles.speedButton, ...(state.speed === 0 ? styles.activeButton : {})}}>
           ⏹
         </button>
-        <button onClick={() => onSetSpeed(1)} style={styles.speedButton}>
+        <button onClick={() => onSetSpeed(1)} style={{...styles.speedButton, ...(state.speed === 1 ? styles.activeButton : {})}}>
           ▶
         </button>
-        <button onClick={() => onSetSpeed(2)} style={styles.speedButton}>
+        <button onClick={() => onSetSpeed(2)} style={{...styles.speedButton, ...(state.speed === 2 ? styles.activeButton : {})}}>
           ▶▶
         </button>
       </div>
@@ -52,15 +45,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '8px',
   },
-  button: {
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.2)',
-    color: '#fff',
-    padding: '4px 12px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
   speedButton: {
     background: 'rgba(255,255,255,0.1)',
     border: '1px solid rgba(255,255,255,0.2)',
@@ -69,6 +53,10 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '4px',
     cursor: 'pointer',
     fontSize: '12px',
+  },
+  activeButton: {
+    background: 'rgba(255, 200, 0, 0.3)',
+    borderColor: '#ffc800',
   },
 }
 

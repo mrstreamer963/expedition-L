@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import GameCanvas from './ui/GameCanvas'
 import TopBar from './ui/TopBar'
 import BuildMenu from './ui/BuildMenu'
@@ -11,13 +11,21 @@ function App() {
   const gameRef = useRef<GameWorld | null>(null)
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
+    if (gameRef.current) {
+      gameRef.current.destroy()
+    }
     const game = new GameWorld(canvas)
     game.onUiUpdate = (state) => setUiState({ ...state })
     gameRef.current = game
   }, [])
 
-  const handleTogglePause = useCallback(() => {
-    gameRef.current?.togglePause()
+  useEffect(() => {
+    return () => {
+      if (gameRef.current) {
+        gameRef.current.destroy()
+        gameRef.current = null
+      }
+    }
   }, [])
 
   const handleSetSpeed = useCallback((speed: 0 | 1 | 2) => {
@@ -34,7 +42,6 @@ function App() {
     <div style={styles.root}>
       <TopBar
         state={uiState}
-        onTogglePause={handleTogglePause}
         onSetSpeed={handleSetSpeed}
       />
       <BuildMenu

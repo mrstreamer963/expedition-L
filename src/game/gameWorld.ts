@@ -118,6 +118,7 @@ export class GameWorld {
         Math.round(c.position.x) === tileX && Math.round(c.position.y) === tileY
       )
       this.selectedColonistId = colonist ? colonist.id : null
+      this.emitUiState()
     }
 
     // Right click: move command
@@ -260,16 +261,19 @@ export class GameWorld {
       this.paused = true
       this.gameLoop.setSpeed(0)
     }
+    this.emitUiState()
   }
 
   setSpeed(speed: GameSpeed): void {
     this.speed = speed
     this.paused = speed === 0
     this.gameLoop.setSpeed(speed)
+    this.emitUiState()
   }
 
   setBuildMode(mode: BuildMode): void {
     this.buildMode = mode
+    this.emitUiState()
   }
 
   // ===== GAME LOOP =====
