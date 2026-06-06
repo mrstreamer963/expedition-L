@@ -344,6 +344,9 @@ export class GameWorld {
     // Render entities (food, beds, buildings)
     this.renderEntities(ctx)
 
+    // Render build queue ghosts (pending constructions)
+    this.renderBuildQueueGhosts(ctx)
+
     // Render hover/build highlight
     this.renderHighlight(ctx)
 
@@ -410,6 +413,40 @@ export class GameWorld {
     }
   }
 
+  private renderBuildQueueGhosts(ctx: CanvasRenderingContext2D): void {
+    if (this.buildQueue.length === 0) return
+    const hh = TILE_HEIGHT / 2
+
+    ctx.save()
+    ctx.globalAlpha = 0.35
+
+    for (const task of this.buildQueue.all) {
+      const { x: sx, y: sy } = tileToScreen(task.x, task.y)
+      const cx = sx + this.camera.offsetX
+      const cy = sy + this.camera.offsetY
+
+      if (task.type === 'wall') {
+        drawWall3D(ctx, cx, cy)
+      } else if (task.type === 'bed') {
+        ctx.fillStyle = '#c49a6c'
+        roundRect(ctx, cx - 14, cy - hh - 10, 28, 16, 3)
+        ctx.fill()
+        ctx.fillStyle = '#d4b080'
+        roundRect(ctx, cx + 4, cy - hh - 12, 10, 8, 2)
+        ctx.fill()
+      } else if (task.type === 'food') {
+        ctx.fillStyle = '#d44040'
+        ctx.beginPath()
+        ctx.arc(cx - 3, cy - hh - 4, 3, 0, Math.PI * 2)
+        ctx.arc(cx + 3, cy - hh - 5, 3, 0, Math.PI * 2)
+        ctx.arc(cx + 1, cy - hh - 2, 3, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+
+    ctx.restore()
+  }
+
   private renderHighlight(ctx: CanvasRenderingContext2D): void {
     if (!this.hoveredTile) return
     const { x: sx, y: sy } = tileToScreen(this.hoveredTile.x, this.hoveredTile.y)
@@ -432,6 +469,28 @@ export class GameWorld {
       ctx.strokeStyle = canBuild ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)'
       ctx.lineWidth = 2
       ctx.stroke()
+
+      // Ghost preview of the object being built
+      ctx.save()
+      ctx.globalAlpha = 0.35
+      if (this.buildMode === 'wall') {
+        drawWall3D(ctx, cx, cy)
+      } else if (this.buildMode === 'bed') {
+        ctx.fillStyle = '#c49a6c'
+        roundRect(ctx, cx - 14, cy - hh - 10, 28, 16, 3)
+        ctx.fill()
+        ctx.fillStyle = '#d4b080'
+        roundRect(ctx, cx + 4, cy - hh - 12, 10, 8, 2)
+        ctx.fill()
+      } else if (this.buildMode === 'food') {
+        ctx.fillStyle = '#d44040'
+        ctx.beginPath()
+        ctx.arc(cx - 3, cy - hh - 4, 3, 0, Math.PI * 2)
+        ctx.arc(cx + 3, cy - hh - 5, 3, 0, Math.PI * 2)
+        ctx.arc(cx + 1, cy - hh - 2, 3, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.restore()
     } else {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
       ctx.lineWidth = 1
