@@ -13,16 +13,22 @@ export interface Tile {
   walkable: boolean
 }
 
-// Tile definitions with colors and walkability
-export const TILE_DATA: Record<TileType, { color: string; walkable: boolean }> = {
-  [TileType.Floor]: { color: '#4a7c59', walkable: true },
-  [TileType.Wall]: { color: '#8b7355', walkable: false },
-  [TileType.Rock]: { color: '#6b6b6b', walkable: false },
-  [TileType.Water]: { color: '#5b8fb9', walkable: false },
-  [TileType.Bed]: { color: '#c49a6c', walkable: true },
-  [TileType.Food]: { color: '#e8d44d', walkable: true },
+export interface TileData {
+  color: string
+  walkable: boolean
+  pattern: string // name of procedural pattern
+}
+
+// Tile definitions with colors, walkability, and pattern name
+export const TILE_DATA: Record<TileType, TileData> = {
+  [TileType.Floor]: { color: '#5a8c69', walkable: true, pattern: 'grass' },
+  [TileType.Wall]: { color: '#9a8b6a', walkable: false, pattern: 'brick' },
+  [TileType.Rock]: { color: '#6b6b6b', walkable: false, pattern: 'crack' },
+  [TileType.Water]: { color: '#4a7fa9', walkable: false, pattern: 'wave' },
+  [TileType.Bed]: { color: '#c49a6c', walkable: true, pattern: 'stripe' },
+  [TileType.Food]: { color: '#e8d44d', walkable: true, pattern: 'dot' },
 }
 
 // Tile dimensions for isometric rendering
-export const TILE_WIDTH = 32  // screen width of one tile (32px for a 32x16 diamond)
-export const TILE_HEIGHT = 16 // screen height of one tile
+export const TILE_WIDTH = 48  // screen width of one tile (48×24 diamond)
+export const TILE_HEIGHT = 24 // screen height of one tile

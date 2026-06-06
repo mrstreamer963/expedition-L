@@ -1,5 +1,5 @@
 import { GameMap } from './world/map'
-import { TileType } from './world/tile'
+import { TileType, TILE_WIDTH, TILE_HEIGHT } from './world/tile'
 import { Colonist, Vec2 } from './colony/colonist'
 import { createInitialColonists } from './colony/colonistFactory'
 import { Camera } from './camera'
@@ -8,6 +8,8 @@ import { InputHandler } from './input/inputHandler'
 import { findPath } from './world/pathfinding'
 import { renderMap } from '../render/canvas'
 import { drawColonist } from '../render/drawColonist'
+import { drawWall3D } from '../render/drawWall3D'
+import { drawShadow } from '../render/drawShadow'
 import { tileToScreen } from './isoUtils'
 import { UIState, BuildMode } from '../ui/types'
 import { GameSpeed } from '../store/types'
@@ -328,11 +330,14 @@ export class GameWorld {
     // Render map
     renderMap(ctx, this.map, this.camera.offsetX, this.camera.offsetY)
 
-    // Render colonists (sorted by position for proper depth)
+    // Render colonists with shadows (sorted by position for proper depth)
     const sortedColonists = [...this.colonists].sort(
       (a, b) => (a.position.x + a.position.y) - (b.position.x + b.position.y)
     )
     for (const colonist of sortedColonists) {
+      const pos = colonist.getInterpolatedPosition()
+      const { x: sx, y: sy } = tileToScreen(pos.x, pos.y)
+      drawShadow(ctx, sx + this.camera.offsetX, sy + this.camera.offsetY)
       drawColonist(ctx, colonist, this.camera.offsetX, this.camera.offsetY)
     }
 
@@ -350,60 +355,88 @@ export class GameWorld {
   }
 
   private renderEntities(ctx: CanvasRenderingContext2D): void {
-    // Food: small yellow squares
+    const hh = TILE_HEIGHT / 2
+
+    // Shadows for food and beds
     for (const food of this.foods) {
       const { x: sx, y: sy } = tileToScreen(food.x, food.y)
-      ctx.fillStyle = '#e8d44d'
-      ctx.fillRect(sx + this.camera.offsetX - 4, sy + this.camera.offsetY - 8 - 4, 8, 8)
+      drawShadow(ctx, sx + this.camera.offsetX, sy + this.camera.offsetY, 12, 5)
     }
-
-    // Beds: brown rectangles
     for (const bed of this.beds) {
       const { x: sx, y: sy } = tileToScreen(bed.x, bed.y)
-      ctx.fillStyle = '#c49a6c'
-      ctx.fillRect(sx + this.camera.offsetX - 10, sy + this.camera.offsetY - 8 - 6, 20, 12)
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)'
-      ctx.strokeRect(sx + this.camera.offsetX - 10, sy + this.camera.offsetY - 8 - 6, 20, 12)
+      drawShadow(ctx, sx + this.camera.offsetX, sy + this.camera.offsetY, 24, 8)
     }
 
-    // Buildings (walls)
-    for (const building of this.buildings) {
-      ctx.fillStyle = '#8b7355'
-      const { x: sx2, y: sy2 } = tileToScreen(building.x, building.y)
+    // Food: red berry cluster
+    for (const food of this.foods) {
+      const { x: sx, y: sy } = tileToScreen(food.x, food.y)
+      const fx = sx + this.camera.offsetX
+      const fy = sy + this.camera.offsetY - hh - 4
+      ctx.fillStyle = '#d44040'
       ctx.beginPath()
-      const hw = 16, hh = 8
-      ctx.moveTo(sx2 + this.camera.offsetX, sy2 + this.camera.offsetY - hh)
-      ctx.lineTo(sx2 + this.camera.offsetX + hw, sy2 + this.camera.offsetY)
-      ctx.lineTo(sx2 + this.camera.offsetX, sy2 + this.camera.offsetY + hh)
-      ctx.lineTo(sx2 + this.camera.offsetX - hw, sy2 + this.camera.offsetY)
-      ctx.closePath()
+      ctx.arc(fx - 3, fy, 3, 0, Math.PI * 2)
+      ctx.arc(fx + 3, fy - 1, 3, 0, Math.PI * 2)
+      ctx.arc(fx + 1, fy + 2, 3, 0, Math.PI * 2)
       ctx.fill()
+      ctx.fillStyle = '#e8d44d'
+      ctx.beginPath()
+      ctx.arc(fx - 3, fy, 1.5, 0, Math.PI * 2)
+      ctx.arc(fx + 3, fy - 1, 1.5, 0, Math.PI * 2)
+      ctx.arc(fx + 1, fy + 2, 1.5, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // Beds: brown mattress with pillow
+    for (const bed of this.beds) {
+      const { x: sx, y: sy } = tileToScreen(bed.x, bed.y)
+      const bx = sx + this.camera.offsetX
+      const by = sy + this.camera.offsetY - hh - 4
+      ctx.fillStyle = '#c49a6c'
+      roundRect(ctx, bx - 14, by - 6, 28, 16, 3)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)'
+      ctx.lineWidth = 0.5
+      ctx.stroke()
+      // Pillow
+      ctx.fillStyle = '#d4b080'
+      roundRect(ctx, bx + 4, by - 4, 10, 8, 2)
+      ctx.fill()
+    }
+
+    // Buildings (walls) — 3D rendering
+    for (const building of this.buildings) {
+      const { x: sx, y: sy } = tileToScreen(building.x, building.y)
+      drawWall3D(ctx, sx + this.camera.offsetX, sy + this.camera.offsetY)
     }
   }
 
   private renderHighlight(ctx: CanvasRenderingContext2D): void {
     if (!this.hoveredTile) return
     const { x: sx, y: sy } = tileToScreen(this.hoveredTile.x, this.hoveredTile.y)
-    const hw = 16, hh = 8
+    const cx = sx + this.camera.offsetX
+    const cy = sy + this.camera.offsetY
+    const hw = TILE_WIDTH / 2, hh = TILE_HEIGHT / 2
 
+    // Draw highlight diamond
     ctx.beginPath()
-    ctx.moveTo(sx + this.camera.offsetX, sy + this.camera.offsetY - hh)
-    ctx.lineTo(sx + this.camera.offsetX + hw, sy + this.camera.offsetY)
-    ctx.lineTo(sx + this.camera.offsetX, sy + this.camera.offsetY + hh)
-    ctx.lineTo(sx + this.camera.offsetX - hw, sy + this.camera.offsetY)
+    ctx.moveTo(cx, cy - hh)
+    ctx.lineTo(cx + hw, cy)
+    ctx.lineTo(cx, cy + hh)
+    ctx.lineTo(cx - hw, cy)
     ctx.closePath()
 
     if (this.buildMode !== 'none') {
-      ctx.fillStyle = this.canBuildAt(this.hoveredTile.x, this.hoveredTile.y)
-        ? 'rgba(0, 255, 0, 0.3)'
-        : 'rgba(255, 0, 0, 0.3)'
+      const canBuild = this.canBuildAt(this.hoveredTile.x, this.hoveredTile.y)
+      ctx.fillStyle = canBuild ? 'rgba(0, 255, 0, 0.15)' : 'rgba(255, 0, 0, 0.2)'
+      ctx.fill()
+      ctx.strokeStyle = canBuild ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)'
+      ctx.lineWidth = 2
+      ctx.stroke()
     } else {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+      ctx.lineWidth = 1
+      ctx.stroke()
     }
-    ctx.fill()
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
-    ctx.lineWidth = 1
-    ctx.stroke()
   }
 
   private renderSelection(ctx: CanvasRenderingContext2D): void {
@@ -413,7 +446,7 @@ export class GameWorld {
 
     const pos = colonist.getInterpolatedPosition()
     const { x: sx, y: sy } = tileToScreen(pos.x, pos.y)
-    const hw = 16, hh = 8
+    const hw = TILE_WIDTH / 2, hh = TILE_HEIGHT / 2
 
     ctx.beginPath()
     ctx.moveTo(sx + this.camera.offsetX, sy + this.camera.offsetY - hh)
@@ -479,4 +512,21 @@ export class GameWorld {
   destroy(): void {
     this.gameLoop.destroy()
   }
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+): void {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
 }

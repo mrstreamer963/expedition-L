@@ -1,10 +1,7 @@
 import { Tile, TILE_DATA, TILE_WIDTH, TILE_HEIGHT } from '../game/world/tile'
 import { tileToScreen } from '../game/isoUtils'
+import { getTilePattern } from './textures'
 
-/**
- * Draw a single isometric tile on canvas
- * Tile is drawn as a diamond (rhombus) of 32×16px
- */
 export function drawTile(
   ctx: CanvasRenderingContext2D,
   tile: Tile,
@@ -17,24 +14,26 @@ export function drawTile(
   const screenX = sx + offsetX
   const screenY = sy + offsetY
 
-  const hw = TILE_WIDTH / 2  // half width (16)
-  const hh = TILE_HEIGHT / 2 // half height (8)
+  const hw = TILE_WIDTH / 2
+  const hh = TILE_HEIGHT / 2
 
-  const color = TILE_DATA[tile.type].color
-
-  // Draw the diamond shape
   ctx.beginPath()
-  ctx.moveTo(screenX, sy - hh)           // top
-  ctx.lineTo(screenX + hw, screenY)      // right
-  ctx.lineTo(screenX, screenY + hh)      // bottom
-  ctx.lineTo(screenX - hw, screenY)      // left
+  ctx.moveTo(screenX, screenY - hh)
+  ctx.lineTo(screenX + hw, screenY)
+  ctx.lineTo(screenX, screenY + hh)
+  ctx.lineTo(screenX - hw, screenY)
   ctx.closePath()
 
-  ctx.fillStyle = color
+  // Use procedural pattern for most tiles, fallback to flat color
+  const pattern = getTilePattern(tile.type)
+  if (pattern) {
+    ctx.fillStyle = pattern
+  } else {
+    ctx.fillStyle = TILE_DATA[tile.type].color
+  }
   ctx.fill()
 
-  // Subtle border for depth
-  ctx.strokeStyle = 'rgba(0,0,0,0.15)'
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)'
   ctx.lineWidth = 0.5
   ctx.stroke()
 }

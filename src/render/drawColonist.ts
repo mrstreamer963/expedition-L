@@ -1,10 +1,6 @@
 import { Colonist } from '../game/colony/colonist'
 import { tileToScreen } from '../game/isoUtils'
 
-/**
- * Draw a colonist on canvas
- * Visual: colored rectangle 12×16px + name label above
- */
 export function drawColonist(
   ctx: CanvasRenderingContext2D,
   colonist: Colonist,
@@ -13,37 +9,86 @@ export function drawColonist(
 ): void {
   const pos = colonist.getInterpolatedPosition()
   const { x: sx, y: sy } = tileToScreen(pos.x, pos.y)
-  const screenX = sx + offsetX
-  const screenY = sy + offsetY
+  const cx = sx + offsetX
+  const cy = sy + offsetY
 
-  // Colonist body: rectangle
-  const w = 12
-  const h = 16
+  // Legs
+  ctx.fillStyle = darken(colonist.color, 0.4)
+  ctx.fillRect(cx - 4, cy - 6, 3, 6)
+  ctx.fillRect(cx + 1, cy - 6, 3, 6)
+
+  // Body
+  ctx.fillStyle = darken(colonist.color, 0.2)
+  roundRect(ctx, cx - 5, cy - 16, 10, 12, 2)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+  ctx.lineWidth = 0.5
+  ctx.stroke()
+
+  // Head
   ctx.fillStyle = colonist.color
-  ctx.fillRect(screenX - w / 2, screenY - h, w, h)
+  ctx.beginPath()
+  ctx.arc(cx, cy - 20, 5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+  ctx.lineWidth = 0.5
+  ctx.stroke()
 
-  // Outline
-  ctx.strokeStyle = 'rgba(0,0,0,0.4)'
-  ctx.lineWidth = 1
-  ctx.strokeRect(screenX - w / 2, screenY - h, w, h)
+  // Eyes (only if not sleeping)
+  if (colonist.state !== 'sleeping') {
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(cx - 3, cy - 21, 2, 2)
+    ctx.fillRect(cx + 1, cy - 21, 2, 2)
+  }
 
-  // Name label above
+  // Need bars above head
+  const barY = cy - 28
+  const barW = 24
+  const barH = 3
+  const gap = 1
+
+  // Hunger bar
+  const hungerColor = colonist.needs.hunger > 40 ? '#60d080' : '#e06060'
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'
+  ctx.fillRect(cx - barW / 2 - 1, barY - 1, barW + 2, barH + 2)
+  ctx.fillStyle = hungerColor
+  ctx.fillRect(cx - barW / 2, barY, barW * (colonist.needs.hunger / 100), barH)
+
+  // Sleep bar
+  const sleepColor = colonist.needs.sleep > 25 ? '#60a0e0' : '#e0a060'
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'
+  ctx.fillRect(cx - barW / 2 - 1, barY + barH + gap - 1, barW + 2, barH + 2)
+  ctx.fillStyle = sleepColor
+  ctx.fillRect(cx - barW / 2, barY + barH + gap, barW * (colonist.needs.sleep / 100), barH)
+
+  // Name label
   ctx.fillStyle = 'rgba(255,255,255,0.9)'
-  ctx.font = '10px system-ui, sans-serif'
+  ctx.font = '9px system-ui, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText(colonist.name, screenX, screenY - h - 6)
+  ctx.fillText(colonist.name, cx, barY - 5)
+}
 
-  // State indicator
-  const stateEmoji: Record<string, string> = {
-    idle: '',
-    walking: '',
-    eating: '🍖',
-    sleeping: '💤',
-    building: '🔨',
-  }
-  const emoji = stateEmoji[colonist.state]
-  if (emoji) {
-    ctx.font = '10px sans-serif'
-    ctx.fillText(emoji, screenX + 10, screenY - h - 6)
-  }
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+): void {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
+}
+
+function darken(hex: string, amount: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const f = 1 - amount
+  return `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`
 }
