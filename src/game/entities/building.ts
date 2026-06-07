@@ -19,12 +19,14 @@ export interface BuildTask {
   type: BuildingType
   x: number
   y: number
+  reservedBy: string | null
 }
 
 export class BuildQueue {
   private tasks: BuildTask[] = []
 
   add(task: BuildTask): void {
+    task.reservedBy = null
     this.tasks.push(task)
   }
 

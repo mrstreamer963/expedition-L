@@ -19,19 +19,19 @@ export class GameMap {
         // Water on edges (border 1-2 tiles from edge, randomly)
         const edgeDistance = Math.min(x, y, MAP_WIDTH - 1 - x, MAP_HEIGHT - 1 - y)
         if (edgeDistance === 0 && Math.random() < 0.6) {
-          row.push({ type: TileType.Water, walkable: false })
+          row.push({ type: TileType.Water, walkable: false, occupantId: null })
         }
         // Rocks near edges
         else if (edgeDistance <= 2 && Math.random() < 0.3) {
-          row.push({ type: TileType.Rock, walkable: false })
+          row.push({ type: TileType.Rock, walkable: false, occupantId: null })
         }
         // Scattered rocks in interior (5% chance)
         else if (Math.random() < 0.05) {
-          row.push({ type: TileType.Rock, walkable: false })
+          row.push({ type: TileType.Rock, walkable: false, occupantId: null })
         }
         // Default: grass floor
         else {
-          row.push({ type: TileType.Floor, walkable: true })
+          row.push({ type: TileType.Floor, walkable: true, occupantId: null })
         }
       }
       grid.push(row)
@@ -42,7 +42,7 @@ export class GameMap {
   // Get tile at position (returns floor if out of bounds)
   tileAt(x: number, y: number): Tile {
     if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) {
-      return { type: TileType.Water, walkable: false }
+      return { type: TileType.Water, walkable: false, occupantId: null }
     }
     return this.grid[y][x]
   }
@@ -51,12 +51,23 @@ export class GameMap {
   setTile(x: number, y: number, type: TileType): void {
     if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return
     const data = TILE_DATA[type]
-    this.grid[y][x] = { type, walkable: data.walkable }
+    this.grid[y][x] = { type, walkable: data.walkable, occupantId: null }
   }
 
   // Check if a tile is walkable
   isWalkable(x: number, y: number): boolean {
     return this.tileAt(x, y).walkable
+  }
+
+  // Manage tile occupancy
+  setOccupant(x: number, y: number, id: string | null): void {
+    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return
+    this.grid[y][x].occupantId = id
+  }
+
+  getOccupant(x: number, y: number): string | null {
+    if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return null
+    return this.grid[y][x].occupantId
   }
 
   // Get the full grid (for iteration during rendering)

@@ -14,6 +14,7 @@ import { tileToScreen } from './isoUtils'
 import { UIState, BuildMode } from '../ui/types'
 import { GameSpeed } from '../store/types'
 import { JobSystem } from './colony/jobSystem'
+import { WorkGiver } from './colony/workGiver'
 import { Food } from './entities/food'
 import { Bed } from './entities/bed'
 import { Building, BuildQueue, BuildTask } from './entities/building'
@@ -26,6 +27,7 @@ export class GameWorld {
   gameLoop: GameLoop
   inputHandler: InputHandler
   jobSystem: JobSystem
+  workGiver: WorkGiver
   buildQueue: BuildQueue
 
   // Entities
@@ -58,8 +60,13 @@ export class GameWorld {
     // Initialize systems
     this.map = new GameMap()
     this.colonists = createInitialColonists()
+    // Mark initial colonist positions as occupied
+    for (const c of this.colonists) {
+      this.occupyColonistTile(c)
+    }
     this.camera = new Camera(this.width / 2, 100) // Center horizontally, offset vertically
     this.jobSystem = new JobSystem()
+    this.workGiver = new WorkGiver()
     this.buildQueue = new BuildQueue()
 
     // Place initial entities
@@ -128,10 +135,11 @@ export class GameWorld {
       const colonist = this.getNearestColonist(target)
       if (colonist && this.map.isWalkable(tileX, tileY)) {
         const occupied = this.colonists
-          .filter(c => c.id !== colonist.id)
+          .filter(c => c.id !== colonist.id && c.state !== 'walking')
           .map(c => ({ x: Math.round(c.position.x), y: Math.round(c.position.y) }))
         const path = findPath(this.map, colonist.position, target, occupied)
         if (path.length > 0) {
+          this.releaseColonistTile(colonist)
           colonist.setPath(path)
           colonist.state = 'walking'
           colonist.currentJob = { type: 'walk', targetX: tileX, targetY: tileY }
@@ -178,11 +186,9 @@ export class GameWorld {
       type: this.buildMode as 'wall' | 'bed' | 'food',
       x: tileX,
       y: tileY,
+      reservedBy: null,
     }
     this.buildQueue.add(task)
-
-    // Assign to nearest colonist
-    this.jobSystem.assignBuildJob(this, task)
   }
 
   private canBuildAt(x: number, y: number): boolean {
@@ -276,6 +282,24 @@ export class GameWorld {
     this.emitUiState()
   }
 
+  // Occupy / release tile helpers
+  private occupyColonistTile(colonist: Colonist): void {
+    const tx = Math.round(colonist.position.x)
+    const ty = Math.round(colonist.position.y)
+    const current = this.map.getOccupant(tx, ty)
+    if (current === null) {
+      this.map.setOccupant(tx, ty, colonist.id)
+    }
+  }
+
+  private releaseColonistTile(colonist: Colonist): void {
+    const tx = Math.round(colonist.position.x)
+    const ty = Math.round(colonist.position.y)
+    if (this.map.getOccupant(tx, ty) === colonist.id) {
+      this.map.setOccupant(tx, ty, null)
+    }
+  }
+
   // ===== GAME LOOP =====
 
   private update(dt: number): void {
@@ -284,10 +308,21 @@ export class GameWorld {
 
     // Update colonists movement
     for (const colonist of this.colonists) {
-      const arrived = colonist.move(dt)
-      if (arrived && colonist.onArrive) {
-        colonist.onArrive()
-        colonist.onArrive = null
+      const arrived = colonist.move(dt, this.map)
+      if (arrived) {
+        if (colonist.onArrive) {
+          this.occupyColonistTile(colonist)
+          colonist.onArrive()
+          colonist.onArrive = null
+        } else {
+          // Cancelled mid-transit — release any reserved build task
+          if (colonist.pendingBuildTaskId) {
+            const task = this.buildQueue.all.find(t => t.id === colonist.pendingBuildTaskId)
+            if (task) this.workGiver.release(task)
+            colonist.pendingBuildTaskId = null
+          }
+          this.occupyColonistTile(colonist)
+        }
       }
     }
 
@@ -303,6 +338,7 @@ export class GameWorld {
         } else if (prevJob === 'build') {
           this.completeBuildAt(colonist.position.x, colonist.position.y)
         }
+        this.occupyColonistTile(colonist)
       }
     }
 
@@ -313,7 +349,7 @@ export class GameWorld {
     }
 
     // Job system tick (assign tasks periodically)
-    this.jobSystem.tick(dt, this)
+    this.jobSystem.tick(dt, this, this.workGiver)
 
     // UI update (throttled)
     this.uiUpdateTimer += dt

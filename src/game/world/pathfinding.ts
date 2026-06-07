@@ -42,10 +42,8 @@ export function findPath(
   if (!map.isWalkable(endX, endY)) return []
 
   const occupiedSet = new Set(occupiedPositions?.map(p => `${p.x},${p.y}`) || [])
-  // Don't block start position
+  // Don't block start position (colonist must be able to leave)
   occupiedSet.delete(`${startX},${startY}`)
-  // Don't block end position
-  occupiedSet.delete(`${endX},${endY}`)
 
   const openList: Node[] = []
   const closedSet = new Set<string>()

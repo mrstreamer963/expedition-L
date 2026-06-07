@@ -101,8 +101,8 @@ export class InputHandler {
   // Update camera from WASD keys (call each frame)
   update(dt: number): void {
     const speed = this.CAMERA_SPEED * dt * 60 // normalize to ~60fps
-    if (this.keys.has('w') || this.keys.has('ц')) this.camera.pan(0, -speed)
-    if (this.keys.has('s') || this.keys.has('ы')) this.camera.pan(0, speed)
+    if (this.keys.has('w') || this.keys.has('ц')) this.camera.pan(0, speed)
+    if (this.keys.has('s') || this.keys.has('ы')) this.camera.pan(0, -speed)
     if (this.keys.has('a') || this.keys.has('ф')) this.camera.pan(speed, 0)
     if (this.keys.has('d') || this.keys.has('в')) this.camera.pan(-speed, 0)
   }

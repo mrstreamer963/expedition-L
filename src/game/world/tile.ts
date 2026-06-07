@@ -11,6 +11,7 @@ export enum TileType {
 export interface Tile {
   type: TileType
   walkable: boolean
+  occupantId: string | null
 }
 
 export interface TileData {

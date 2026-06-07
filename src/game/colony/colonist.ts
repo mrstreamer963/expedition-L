@@ -1,3 +1,5 @@
+import { GameMap } from '../world/map'
+
 export type ColonistState = 'idle' | 'walking' | 'eating' | 'sleeping' | 'building'
 
 export interface Vec2 {
@@ -15,6 +17,7 @@ export interface ColonistJob {
   targetX?: number
   targetY?: number
   progress?: number // 0-1 for building animation
+  taskId?: string // build task id for WorkGiver release
 }
 
 export class Colonist {
@@ -33,6 +36,8 @@ export class Colonist {
   onArrive: (() => void) | null = null
   // Building type when performing a build job (wall/bed/food)
   buildType: string | null = null
+  // Build task id for WorkGiver release — persists across cancelJob
+  pendingBuildTaskId: string | null = null
 
   // Internal movement tracking
   private moveProgress: number = 0 // progress along current path step
@@ -60,14 +65,32 @@ export class Colonist {
     }
   }
 
+  cancelJob(): void {
+    this.path = []
+    this.moveProgress = 0
+    this.targetPosition = null
+    this.currentJob = null
+    this.onArrive = null
+    this.state = 'idle'
+  }
+
   // Update movement
-  move(dt: number): boolean {
+  move(dt: number, map: GameMap): boolean {
     if (this.state !== 'walking' || this.path.length === 0) return false
 
     this.moveProgress += this.speed * dt
 
     while (this.moveProgress >= 1 && this.path.length > 0) {
       this.moveProgress -= 1
+
+      const finalIdx = this.path.length - 1
+      const finalTile = this.path[finalIdx]
+      const occupant = map.getOccupant(Math.round(finalTile.x), Math.round(finalTile.y))
+      if (occupant !== null && occupant !== this.id) {
+        this.cancelJob()
+        return true
+      }
+
       const next = this.path.shift()!
       this.position = { x: next.x, y: next.y }
     }
