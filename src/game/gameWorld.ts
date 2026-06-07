@@ -189,6 +189,7 @@ export class GameWorld {
       reservedBy: null,
     }
     this.buildQueue.add(task)
+    this.emitUiState()
   }
 
   private canBuildAt(x: number, y: number): boolean {
