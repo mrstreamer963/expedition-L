@@ -89,6 +89,13 @@ export class JobSystem {
   private sendTo(colonist: Colonist, target: { x: number; y: number }, world: any, onArrive?: () => void): void {
     if (!world.map.isWalkable(target.x, target.y)) return
 
+    // Already at target — fire callback immediately
+    if (Math.round(colonist.position.x) === Math.round(target.x) &&
+        Math.round(colonist.position.y) === Math.round(target.y)) {
+      if (onArrive) onArrive()
+      return
+    }
+
     const occupied = world.colonists
       .filter((c: Colonist) => c.id !== colonist.id && c.state !== 'walking')
       .map((c: Colonist) => ({ x: Math.round(c.position.x), y: Math.round(c.position.y) }))
