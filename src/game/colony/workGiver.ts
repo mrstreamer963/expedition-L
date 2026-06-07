@@ -1,4 +1,3 @@
-import { Colonist } from './colonist'
 import { BuildTask } from '../entities/building'
 
 export class WorkGiver {
@@ -21,7 +20,4 @@ export class WorkGiver {
     }
   }
 
-  getAvailableTask(buildQueueAll: BuildTask[], _colonist: Colonist): BuildTask | null {
-    return buildQueueAll.find(t => t.reservedBy === null) || null
-  }
 }

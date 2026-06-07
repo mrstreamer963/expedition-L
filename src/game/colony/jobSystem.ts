@@ -11,12 +11,11 @@ export class JobSystem {
     if (this.assignTimer < this.ASSIGN_INTERVAL) return
     this.assignTimer = 0
 
+    // Phase 1: Self-preservation (hunger/sleep) — per-colonist
     for (const colonist of world.colonists) {
-      // Skip if busy (eating, sleeping, building) or already walking
       if (colonist.state === 'eating' || colonist.state === 'sleeping' ||
           colonist.state === 'building' || colonist.state === 'walking') continue
 
-      // Self-preservation: hunger overrides everything
       if (colonist.needs.hunger < 40) {
         const food = this.findNearestFood(colonist, world)
         if (food) {
@@ -27,7 +26,6 @@ export class JobSystem {
         }
       }
 
-      // Self-preservation: sleep
       if (colonist.needs.sleep < 25) {
         const bed = this.findNearestBed(colonist, world)
         if (bed) {
@@ -37,26 +35,44 @@ export class JobSystem {
           continue
         }
       }
+    }
 
-      // WorkGiver: build tasks
-      const task = workGiver.getAvailableTask(world.buildQueue.all, colonist)
-      if (task) {
-        workGiver.reserve(task, colonist.id)
-        colonist.pendingBuildTaskId = task.id
-        const taskTarget = { x: task.x, y: task.y }
-        this.sendTo(colonist, taskTarget, world, () => {
-          workGiver.releaseByPosition(world.buildQueue.all, task.x, task.y)
-          colonist.pendingBuildTaskId = null
-          colonist.currentJob = {
-            type: 'build',
-            targetX: task.x,
-            targetY: task.y,
-            taskId: task.id,
-            progress: 0,
-          }
-          colonist.startJob('build', task.x, task.y)
-        })
+    // Phase 2: Build tasks — task-first, assign each to nearest idle colonist
+    const idleColonists = world.colonists.filter(
+      (c: Colonist) => c.state === 'idle'
+    )
+
+    for (const task of world.buildQueue.all) {
+      if (task.reservedBy !== null) continue
+
+      let nearest: Colonist | null = null
+      let minDist = Infinity
+      for (const colonist of idleColonists) {
+        if (colonist.pendingBuildTaskId) continue
+        const dist = Math.abs(colonist.position.x - task.x) + Math.abs(colonist.position.y - task.y)
+        if (dist < minDist) {
+          minDist = dist
+          nearest = colonist
+        }
       }
+
+      if (!nearest) break
+
+      workGiver.reserve(task, nearest.id)
+      nearest.pendingBuildTaskId = task.id
+      const taskTarget = { x: task.x, y: task.y }
+      this.sendTo(nearest, taskTarget, world, () => {
+        workGiver.releaseByPosition(world.buildQueue.all, task.x, task.y)
+        nearest!.pendingBuildTaskId = null
+        nearest!.currentJob = {
+          type: 'build',
+          targetX: task.x,
+          targetY: task.y,
+          taskId: task.id,
+          progress: 0,
+        }
+        nearest!.startJob('build', task.x, task.y)
+      })
     }
   }
 
