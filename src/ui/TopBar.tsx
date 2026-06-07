@@ -16,7 +16,7 @@ function TopBar({ state, onSetSpeed }: TopBarProps) {
           ▶
         </button>
         <button onClick={() => onSetSpeed(2)} style={{...styles.speedButton, ...(state.speed === 2 ? styles.activeButton : {})}}>
-          ▶▶
+          ▶▶ 5x
         </button>
       </div>
 

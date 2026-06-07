@@ -274,7 +274,8 @@ export class GameWorld {
   setSpeed(speed: GameSpeed): void {
     this.speed = speed
     this.paused = speed === 0
-    this.gameLoop.setSpeed(speed)
+    const timeScale = speed === 2 ? 5 : speed
+    this.gameLoop.setSpeed(timeScale)
     this.emitUiState()
   }
 
