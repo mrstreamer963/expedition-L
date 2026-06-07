@@ -179,7 +179,10 @@ export class GameWorld {
 
   private addBuildTask(tileX: number, tileY: number): void {
     // Validate
-    if (!this.canBuildAt(tileX, tileY)) return
+    if (!this.canBuildAt(tileX, tileY)) {
+      this.emitUiState()
+      return
+    }
 
     const task: BuildTask = {
       id: `build-${Date.now()}`,
