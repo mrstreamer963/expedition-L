@@ -1,8 +1,4 @@
-## Purpose
-
-Allow the user to pan the camera using keyboard controls (W/A/S/D) for isometric map navigation. W/S are inverted relative to conventional screen-space — W pans downward, S pans upward — to match player expectations in isometric perspective.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Keyboard map panning with inverted W/S
 The system SHALL allow the user to pan the camera using W/A/S/D keys. W SHALL pan the camera downward, S SHALL pan the camera upward. Cyrillic keyboard equivalents (`ц`, `ф`, `ы`, `в`) SHALL behave identically to their Latin counterparts. Panning speed SHALL be constant regardless of the current game speed setting.

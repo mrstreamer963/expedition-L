@@ -99,7 +99,7 @@ export class GameWorld {
     this.gameLoop = new GameLoop({
       canvas,
       onUpdate: (dt) => this.update(dt),
-      onRender: (ctx) => this.render(ctx),
+      onRender: (ctx, realDt) => this.render(ctx, realDt),
     })
     this.gameLoop.setSpeed(initialSpeed)
 
@@ -332,9 +332,6 @@ export class GameWorld {
   // ===== GAME LOOP =====
 
   private update(dt: number): void {
-    // Input (camera WASD)
-    this.inputHandler.update(dt)
-
     // Update colonists movement
     for (const colonist of this.colonists) {
       const arrived = colonist.move(dt, this.map)
@@ -389,7 +386,11 @@ export class GameWorld {
     }
   }
 
-  private render(ctx: CanvasRenderingContext2D): void {
+  private render(ctx: CanvasRenderingContext2D, realDt: number = 0): void {
+    // Input processing uses real wall-clock dt (not game time), so camera
+    // panning speed is independent of game speed
+    this.inputHandler.update(realDt)
+
     // Clear canvas
     ctx.clearRect(0, 0, this.width, this.height)
 

@@ -1,6 +1,6 @@
 export interface GameLoopConfig {
   onUpdate: (dt: number) => void
-  onRender: (ctx: CanvasRenderingContext2D) => void
+  onRender: (ctx: CanvasRenderingContext2D, realDt: number) => void
   canvas: HTMLCanvasElement
 }
 
@@ -54,10 +54,10 @@ export class GameLoop {
       this.accumulator -= this.TICK
     }
 
-    // Render always once per frame
+    // Render always once per frame (with real dt for input, not game-scaled time)
     const ctx = this.config.canvas.getContext('2d')
     if (ctx) {
-      this.config.onRender(ctx)
+      this.config.onRender(ctx, dt)
     }
 
     this.rafId = requestAnimationFrame((t) => this.loop(t))
