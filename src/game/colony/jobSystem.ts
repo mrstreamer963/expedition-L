@@ -16,24 +16,17 @@ export class JobSystem {
       if (colonist.state === 'eating' || colonist.state === 'sleeping' ||
           colonist.state === 'building' || colonist.state === 'walking') continue
 
-      if (colonist.needs.hunger < 40) {
-        const food = this.findNearestFood(colonist, world)
-        if (food) {
-          this.sendTo(colonist, food, world, () => {
-            colonist.startJob('eat')
-          })
-          continue
-        }
-      }
+      const isHungry = colonist.needs.hunger < 40
+      const isSleepy = colonist.needs.sleep < 25
 
-      if (colonist.needs.sleep < 25) {
-        const bed = this.findNearestBed(colonist, world)
-        if (bed) {
-          this.sendTo(colonist, bed, world, () => {
-            colonist.startJob('sleep')
-          })
-          continue
-        }
+      if (isHungry && isSleepy) {
+        const primary = colonist.needs.hunger <= colonist.needs.sleep ? 'hunger' : 'sleep'
+        const secondary = primary === 'hunger' ? 'sleep' : 'hunger'
+        if (this.trySatisfyNeed(colonist, primary, world)) continue
+        if (this.trySatisfyNeed(colonist, secondary, world)) continue
+      } else {
+        if (isHungry && this.trySatisfyNeed(colonist, 'hunger', world)) continue
+        if (isSleepy && this.trySatisfyNeed(colonist, 'sleep', world)) continue
       }
     }
 
@@ -76,10 +69,35 @@ export class JobSystem {
     }
   }
 
+  private getOccupiedPositions(colonist: Colonist, world: any): Set<string> {
+    return new Set(
+      world.colonists
+        .filter((c: Colonist) => c.id !== colonist.id && c.state !== 'walking')
+        .map((c: Colonist) => `${Math.round(c.position.x)},${Math.round(c.position.y)}`)
+    )
+  }
+
+  private trySatisfyNeed(colonist: Colonist, need: 'hunger' | 'sleep', world: any): boolean {
+    if (need === 'hunger') {
+      const food = this.findNearestFood(colonist, world)
+      if (food && this.sendTo(colonist, food, world, () => colonist.startJob('eat'))) {
+        return true
+      }
+    } else {
+      const bed = this.findNearestBed(colonist, world)
+      if (bed && this.sendTo(colonist, bed, world, () => colonist.startJob('sleep'))) {
+        return true
+      }
+    }
+    return false
+  }
+
   private findNearestFood(colonist: Colonist, world: any): { x: number; y: number } | null {
+    const occupied = this.getOccupiedPositions(colonist, world)
     let nearest: { x: number; y: number } | null = null
     let minDist = Infinity
     for (const food of world.foods) {
+      if (occupied.has(`${food.x},${food.y}`)) continue
       const dist = Math.abs(colonist.position.x - food.x) + Math.abs(colonist.position.y - food.y)
       if (dist < minDist) {
         minDist = dist
@@ -90,9 +108,11 @@ export class JobSystem {
   }
 
   private findNearestBed(colonist: Colonist, world: any): { x: number; y: number } | null {
+    const occupied = this.getOccupiedPositions(colonist, world)
     let nearest: { x: number; y: number } | null = null
     let minDist = Infinity
     for (const bed of world.beds) {
+      if (occupied.has(`${bed.x},${bed.y}`)) continue
       const dist = Math.abs(colonist.position.x - bed.x) + Math.abs(colonist.position.y - bed.y)
       if (dist < minDist) {
         minDist = dist
@@ -102,14 +122,13 @@ export class JobSystem {
     return nearest
   }
 
-  private sendTo(colonist: Colonist, target: { x: number; y: number }, world: any, onArrive?: () => void): void {
-    if (!world.map.isWalkable(target.x, target.y)) return
+  private sendTo(colonist: Colonist, target: { x: number; y: number }, world: any, onArrive?: () => void): boolean {
+    if (!world.map.isWalkable(target.x, target.y)) return false
 
-    // Already at target — fire callback immediately
     if (Math.round(colonist.position.x) === Math.round(target.x) &&
         Math.round(colonist.position.y) === Math.round(target.y)) {
       if (onArrive) onArrive()
-      return
+      return true
     }
 
     const occupied = world.colonists
@@ -117,7 +136,7 @@ export class JobSystem {
       .map((c: Colonist) => ({ x: Math.round(c.position.x), y: Math.round(c.position.y) }))
 
     const path = findPath(world.map, colonist.position, target, occupied)
-    if (path.length === 0) return
+    if (path.length === 0) return false
 
     if (world.map.getOccupant(Math.round(colonist.position.x), Math.round(colonist.position.y)) === colonist.id) {
       world.map.setOccupant(Math.round(colonist.position.x), Math.round(colonist.position.y), null)
@@ -125,5 +144,6 @@ export class JobSystem {
     colonist.setPath(path)
     colonist.state = 'walking'
     colonist.onArrive = onArrive || null
+    return true
   }
 }
