@@ -117,8 +117,8 @@ export class Colonist {
   }
 
   // Set job state with timer
-  startJob(type: 'eat' | 'sleep' | 'build', targetX?: number, targetY?: number): void {
-    this.currentJob = { type, targetX, targetY, progress: 0 }
+  startJob(type: 'eat' | 'sleep' | 'build', targetX?: number, targetY?: number, taskId?: string): void {
+    this.currentJob = { type, targetX, targetY, progress: 0, taskId }
     this.state = type === 'eat' ? 'eating' : type === 'sleep' ? 'sleeping' : 'building'
     this.jobTimer = 0
   }

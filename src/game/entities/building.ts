@@ -42,6 +42,12 @@ export class BuildQueue {
     return this.tasks[0] || null
   }
 
+  removeById(id: string): BuildTask | null {
+    const idx = this.tasks.findIndex(t => t.id === id)
+    if (idx === -1) return null
+    return this.tasks.splice(idx, 1)[0]
+  }
+
   get length(): number {
     return this.tasks.length
   }

@@ -92,7 +92,7 @@ export class WorldSerializer {
       colonist.path = c.path.map((p: any) => ({ x: p.x, y: p.y }))
       colonist.currentJob = c.currentJob ? { ...c.currentJob } : null
       colonist.buildType = c.buildType
-      colonist.pendingBuildTaskId = c.pendingBuildTaskId
+      colonist.pendingBuildTaskId = null
       ;(colonist as any).moveProgress = (c as any).moveProgress ?? 0
       ;(colonist as any).jobTimer = (c as any).jobTimer ?? 0
       colonist.onArrive = null

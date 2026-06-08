@@ -248,14 +248,12 @@ export class GameWorld {
     }
   }
 
-  private completeBuildAt(x: number, y: number): void {
-    // Get the next build task from the queue
-    const task = this.buildQueue.peek()
+  private completeBuildAt(x: number, y: number, taskId?: string): void {
+    const task = taskId ? this.buildQueue.removeById(taskId) : null
     if (!task) return
 
     const tx = Math.round(x)
     const ty = Math.round(y)
-    if (task.x !== tx || task.y !== ty) return
 
     switch (task.type) {
       case 'wall':
@@ -271,8 +269,6 @@ export class GameWorld {
         this.map.setTile(tx, ty, TileType.Food)
         break
     }
-
-    this.buildQueue.pop()
   }
 
   private getNearestColonist(target: Vec2): Colonist | null {
@@ -362,6 +358,7 @@ export class GameWorld {
     // Update colonist jobs (eating, sleeping, building) and apply effects on completion
     for (const colonist of this.colonists) {
       const prevJob = colonist.currentJob?.type
+      const prevTaskId = colonist.currentJob?.taskId
       const completed = colonist.updateJob(dt)
       if (completed && prevJob) {
         if (prevJob === 'eat') {
@@ -369,7 +366,7 @@ export class GameWorld {
         } else if (prevJob === 'sleep') {
           colonist.needs.sleep = Math.min(100, colonist.needs.sleep + 60)
         } else if (prevJob === 'build') {
-          this.completeBuildAt(colonist.position.x, colonist.position.y)
+          this.completeBuildAt(colonist.position.x, colonist.position.y, prevTaskId)
         }
         this.occupyColonistTile(colonist)
       }

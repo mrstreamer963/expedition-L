@@ -1,6 +1,7 @@
 import { Colonist } from './colonist'
 import { findPath } from '../world/pathfinding'
 import { WorkGiver } from './workGiver'
+import { BuildTask } from '../entities/building'
 
 export class JobSystem {
   private assignTimer: number = 0
@@ -35,6 +36,16 @@ export class JobSystem {
       (c: Colonist) => c.state === 'idle'
     )
 
+    // Clean up stale pendingBuildTaskId references (task no longer in queue)
+    for (const colonist of idleColonists) {
+      if (colonist.pendingBuildTaskId) {
+        const taskExists = world.buildQueue.all.some((t: BuildTask) => t.id === colonist.pendingBuildTaskId)
+        if (!taskExists) {
+          colonist.pendingBuildTaskId = null
+        }
+      }
+    }
+
     for (const task of world.buildQueue.all) {
       if (task.reservedBy !== null) continue
 
@@ -54,18 +65,38 @@ export class JobSystem {
       workGiver.reserve(task, nearest.id)
       nearest.pendingBuildTaskId = task.id
       const taskTarget = { x: task.x, y: task.y }
-      this.sendTo(nearest, taskTarget, world, () => {
-        workGiver.releaseByPosition(world.buildQueue.all, task.x, task.y)
+      const sent = this.sendTo(nearest, taskTarget, world, () => {
+        workGiver.release(task)
         nearest!.pendingBuildTaskId = null
-        nearest!.currentJob = {
-          type: 'build',
-          targetX: task.x,
-          targetY: task.y,
-          taskId: task.id,
-          progress: 0,
-        }
-        nearest!.startJob('build', task.x, task.y)
+        nearest!.startJob('build', task.x, task.y, task.id)
       })
+      if (!sent) {
+        workGiver.release(task)
+        nearest.pendingBuildTaskId = null
+      }
+    }
+
+    // Phase 3: Hungry but no food — force idle colonists to build food
+    if (world.foods.length === 0) {
+      for (const colonist of idleColonists) {
+        if (colonist.pendingBuildTaskId) continue
+        if (colonist.needs.hunger >= 40) continue
+        const foodTask = world.buildQueue.all.find(
+          (t: BuildTask) => t.type === 'food' && t.reservedBy === null
+        )
+        if (!foodTask) break
+        workGiver.reserve(foodTask, colonist.id)
+        colonist.pendingBuildTaskId = foodTask.id
+        const sent = this.sendTo(colonist, { x: foodTask.x, y: foodTask.y }, world, () => {
+          workGiver.release(foodTask)
+          colonist.pendingBuildTaskId = null
+          colonist.startJob('build', foodTask.x, foodTask.y, foodTask.id)
+        })
+        if (!sent) {
+          workGiver.release(foodTask)
+          colonist.pendingBuildTaskId = null
+        }
+      }
     }
   }
 
