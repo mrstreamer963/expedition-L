@@ -75,8 +75,8 @@ export class GameWorld {
       this.buildings = init.buildings
       this.buildQueue = init.buildQueue
       this.camera = init.camera
-      this.speed = init.speed
-      this.paused = init.speed === 0
+      this.speed = [0, 1, 2, 3].includes(init.speed) ? init.speed : 2
+      this.paused = this.speed === 0
     } else {
       // Initialize new game
       this.map = new GameMap()
@@ -95,7 +95,7 @@ export class GameWorld {
     this.setupInputCallbacks()
 
     // Initialize game loop
-    const initialSpeed = savedState ? (savedState.speed === 2 ? 5 : savedState.speed) : 1
+    const initialSpeed = this.speed === 2 ? 5 : this.speed === 3 ? 10 : this.speed
     this.gameLoop = new GameLoop({
       canvas,
       onUpdate: (dt) => this.update(dt),
@@ -197,6 +197,9 @@ export class GameWorld {
           break
         case '3':
           this.setSpeed(2)
+          break
+        case '4':
+          this.setSpeed(3)
           break
       }
     }
@@ -302,7 +305,7 @@ export class GameWorld {
   setSpeed(speed: GameSpeed): void {
     this.speed = speed
     this.paused = speed === 0
-    const timeScale = speed === 2 ? 5 : speed
+    const timeScale = speed === 2 ? 5 : speed === 3 ? 10 : speed
     this.gameLoop.setSpeed(timeScale)
     this.emitUiState()
   }

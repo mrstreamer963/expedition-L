@@ -34,7 +34,7 @@ function App() {
     }
   }, [])
 
-  const handleSetSpeed = useCallback((speed: 0 | 1 | 2) => {
+  const handleSetSpeed = useCallback((speed: 0 | 1 | 2 | 3) => {
     gameRef.current?.setSpeed(speed)
   }, [])
 

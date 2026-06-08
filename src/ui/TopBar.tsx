@@ -3,7 +3,7 @@ import { UIState } from './types'
 
 interface TopBarProps {
   state: UIState
-  onSetSpeed: (speed: 0 | 1 | 2) => void
+  onSetSpeed: (speed: 0 | 1 | 2 | 3) => void
   onSave: () => void
   onLoad: () => void
   onLoadFromStorage: () => void
@@ -52,6 +52,9 @@ function TopBar({ state, onSetSpeed, onSave, onLoad, onLoadFromStorage }: TopBar
         </button>
         <button onClick={() => onSetSpeed(2)} style={{...styles.speedButton, ...(state.speed === 2 ? styles.activeButton : {})}}>
           ▶▶ 5x
+        </button>
+        <button onClick={() => onSetSpeed(3)} style={{...styles.speedButton, ...(state.speed === 3 ? styles.activeButton : {})}}>
+          ▶▶▶ 10x
         </button>
       </div>
 

@@ -1,4 +1,4 @@
-export type GameSpeed = 0 | 1 | 2
+export type GameSpeed = 0 | 1 | 2 | 3
 
 export interface GameState {
   timeScale: number // 0 = paused, 1 = normal, 2 = fast
