@@ -22,7 +22,8 @@ function createState(overrides: Partial<UIState> = {}): UIState {
 describe('TopBar speed button highlighting', () => {
   it('highlights the pause button when speed is 0', () => {
     const state = createState({ speed: 0, timeScale: 0 })
-    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} />)
+    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} onSave={() => {}} onLoad={async () => {}} onLoadFromStorage={() => {}} />)
+    // First 3 buttons are speed controls, 4th is Save, 5th is Restore, 6th is Load
     const buttons = container.querySelectorAll('button')
     expect(buttons[0]).toHaveTextContent('⏹')
     expect(buttons[0].style.background).toBe('rgba(255, 200, 0, 0.3)')
@@ -30,7 +31,7 @@ describe('TopBar speed button highlighting', () => {
 
   it('highlights the normal speed button when speed is 1', () => {
     const state = createState({ speed: 1 })
-    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} />)
+    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} onSave={() => {}} onLoad={async () => {}} onLoadFromStorage={() => {}} />)
     const buttons = container.querySelectorAll('button')
     expect(buttons[1]).toHaveTextContent('▶')
     expect(buttons[1].style.background).toBe('rgba(255, 200, 0, 0.3)')
@@ -38,7 +39,7 @@ describe('TopBar speed button highlighting', () => {
 
   it('highlights the fast speed button when speed is 2', () => {
     const state = createState({ speed: 2 })
-    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} />)
+    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} onSave={() => {}} onLoad={async () => {}} onLoadFromStorage={() => {}} />)
     const buttons = container.querySelectorAll('button')
     expect(buttons[2]).toHaveTextContent('▶▶')
     expect(buttons[2].style.background).toBe('rgba(255, 200, 0, 0.3)')
@@ -46,7 +47,7 @@ describe('TopBar speed button highlighting', () => {
 
   it('only highlights one button at a time', () => {
     const state = createState({ speed: 0, timeScale: 0 })
-    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} />)
+    const { container } = render(<TopBar state={state} onSetSpeed={() => {}} onSave={() => {}} onLoad={async () => {}} onLoadFromStorage={() => {}} />)
     const buttons = container.querySelectorAll('button')
     const highlighted = Array.from(buttons).filter(
       b => b.style.background === 'rgba(255, 200, 0, 0.3)'
@@ -56,7 +57,7 @@ describe('TopBar speed button highlighting', () => {
 
   it('renders food and colonist counts', () => {
     const state = createState({ foodCount: 5, colonistCount: 3 })
-    render(<TopBar state={state} onSetSpeed={() => {}} />)
+    render(<TopBar state={state} onSetSpeed={() => {}} onSave={() => {}} onLoad={async () => {}} onLoadFromStorage={() => {}} />)
     expect(screen.getByText('🍖 5')).toBeInTheDocument()
     expect(screen.getByText('👥 3')).toBeInTheDocument()
   })

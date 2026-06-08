@@ -27,4 +27,8 @@ export class Camera {
 
   get x(): number { return this.offsetX }
   get y(): number { return this.offsetY }
+
+  toJSON(): { offsetX: number; offsetY: number } {
+    return { offsetX: this.offsetX, offsetY: this.offsetY }
+  }
 }

@@ -18,6 +18,8 @@ import { WorkGiver } from './colony/workGiver'
 import { Food } from './entities/food'
 import { Bed } from './entities/bed'
 import { Building, BuildQueue, BuildTask } from './entities/building'
+import { WorldSerializer, SaveData } from './persistence/worldSerializer'
+import { saveToLocalStorage, AUTOSAVE_KEY } from './persistence/storage'
 
 export class GameWorld {
   // Core systems
@@ -52,44 +54,67 @@ export class GameWorld {
   private uiUpdateTimer: number = 0
   private readonly UI_UPDATE_INTERVAL = 0.5 // update UI every 0.5 seconds
 
-  constructor(canvas: HTMLCanvasElement) {
+  private autoSaveHandler: (() => void) | null = null
+
+  constructor(canvas: HTMLCanvasElement, savedState?: SaveData) {
     this.canvas = canvas
     this.width = canvas.width
     this.height = canvas.height
 
-    // Initialize systems
-    this.map = new GameMap()
-    this.colonists = createInitialColonists()
-    // Mark initial colonist positions as occupied
-    for (const c of this.colonists) {
-      this.occupyColonistTile(c)
-    }
-    this.camera = new Camera(this.width / 2, 100) // Center horizontally, offset vertically
+    // Initialize core systems
     this.jobSystem = new JobSystem()
     this.workGiver = new WorkGiver()
     this.buildQueue = new BuildQueue()
 
-    // Place initial entities
-    this.foods = this.placeInitialFood()
-    this.beds = this.placeInitialBeds()
-    this.buildings = []
+    if (savedState) {
+      const init = WorldSerializer.fromJSON(savedState)
+      this.map = init.map
+      this.colonists = init.colonists
+      this.foods = init.foods
+      this.beds = init.beds
+      this.buildings = init.buildings
+      this.buildQueue = init.buildQueue
+      this.camera = init.camera
+      this.speed = init.speed
+      this.paused = init.speed === 0
+    } else {
+      // Initialize new game
+      this.map = new GameMap()
+      this.colonists = createInitialColonists()
+      for (const c of this.colonists) {
+        this.occupyColonistTile(c)
+      }
+      this.camera = new Camera(this.width / 2, 100)
+      this.foods = this.placeInitialFood()
+      this.beds = this.placeInitialBeds()
+      this.buildings = []
+    }
 
     // Initialize input handler
     this.inputHandler = new InputHandler(this.camera, this.map, canvas)
     this.setupInputCallbacks()
 
     // Initialize game loop
+    const initialSpeed = savedState ? (savedState.speed === 2 ? 5 : savedState.speed) : 1
     this.gameLoop = new GameLoop({
       canvas,
       onUpdate: (dt) => this.update(dt),
       onRender: (ctx) => this.render(ctx),
     })
+    this.gameLoop.setSpeed(initialSpeed)
 
     // Start
     this.gameLoop.start()
 
     // Initial UI state
     this.emitUiState()
+
+    // Auto-save on page unload
+    this.autoSaveHandler = () => {
+      const data = WorldSerializer.toJSON(this)
+      saveToLocalStorage(AUTOSAVE_KEY, data)
+    }
+    window.addEventListener('beforeunload', this.autoSaveHandler)
   }
 
   private placeInitialFood(): Food[] {
@@ -615,6 +640,10 @@ export class GameWorld {
 
   destroy(): void {
     this.gameLoop.destroy()
+    if (this.autoSaveHandler) {
+      window.removeEventListener('beforeunload', this.autoSaveHandler)
+      this.autoSaveHandler = null
+    }
   }
 }
 

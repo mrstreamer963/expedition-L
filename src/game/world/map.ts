@@ -6,8 +6,8 @@ export const MAP_HEIGHT = 20
 export class GameMap {
   private grid: Tile[][]
 
-  constructor() {
-    this.grid = this.generateMap()
+  constructor(grid?: Tile[][]) {
+    this.grid = grid ?? this.generateMap()
   }
 
   // Generate initial map: grass floor with rocks and water on edges
@@ -77,4 +77,15 @@ export class GameMap {
 
   get width(): number { return MAP_WIDTH }
   get height(): number { return MAP_HEIGHT }
+
+  toJSON(): { tiles: { type: TileType; occupantId: string | null }[][] } {
+    return {
+      tiles: this.grid.map(row =>
+        row.map(tile => ({
+          type: tile.type,
+          occupantId: tile.occupantId,
+        }))
+      ),
+    }
+  }
 }

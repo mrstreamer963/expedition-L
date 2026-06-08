@@ -145,4 +145,21 @@ export class Colonist {
   isNeedCritical(need: 'hunger' | 'sleep'): boolean {
     return this.needs[need] < 20
   }
+
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      position: { ...this.position },
+      state: this.state,
+      needs: { ...this.needs },
+      currentJob: this.currentJob ? { ...this.currentJob } : null,
+      path: this.path.map(p => ({ ...p })),
+      buildType: this.buildType,
+      pendingBuildTaskId: this.pendingBuildTaskId,
+      moveProgress: this.moveProgress,
+      jobTimer: this.jobTimer,
+    }
+  }
 }

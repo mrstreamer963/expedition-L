@@ -12,6 +12,10 @@ export class Building {
     this.x = x
     this.y = y
   }
+
+  toJSON(): { id: string; type: BuildingType; x: number; y: number } {
+    return { id: this.id, type: this.type, x: this.x, y: this.y }
+  }
 }
 
 export interface BuildTask {
@@ -44,5 +48,9 @@ export class BuildQueue {
 
   get all(): BuildTask[] {
     return [...this.tasks]
+  }
+
+  toJSON(): { tasks: BuildTask[] } {
+    return { tasks: this.tasks.map(t => ({ ...t })) }
   }
 }

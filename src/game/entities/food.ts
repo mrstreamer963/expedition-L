@@ -8,4 +8,8 @@ export class Food {
     this.x = x
     this.y = y
   }
+
+  toJSON(): { id: string; x: number; y: number } {
+    return { id: this.id, x: this.x, y: this.y }
+  }
 }
