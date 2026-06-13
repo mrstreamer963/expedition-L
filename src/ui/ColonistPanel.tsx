@@ -6,10 +6,10 @@ interface ColonistPanelProps {
 
 const stateLabels: Record<string, string> = {
   idle: 'Бездействует',
-  walking: 'Идёт',
-  eating: 'Ест',
-  sleeping: 'Спит',
-  building: 'Строит',
+  moving: 'Идёт',
+  working: 'Работает',
+  assigned: 'Назначено',
+  done: 'Готово',
 }
 
 function ColonistPanel({ colonist }: ColonistPanelProps) {
@@ -54,7 +54,7 @@ function ColonistPanel({ colonist }: ColonistPanelProps) {
       </div>
 
       <div style={styles.status}>
-        {stateLabels[colonist.state] || colonist.state}
+        {stateLabels[colonist.stateLabel] || colonist.stateLabel}
         {colonist.currentJob && ` → ${colonist.currentJob}`}
       </div>
     </div>

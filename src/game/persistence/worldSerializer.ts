@@ -45,7 +45,7 @@ export interface SerializableWorld {
   speed: GameSpeed
 }
 
-const CURRENT_VERSION = 1
+const CURRENT_VERSION = 2
 
 export class WorldSerializer {
   static toJSON(world: SerializableWorld): SaveData {
@@ -67,7 +67,8 @@ export class WorldSerializer {
   static validate(data: unknown): data is SaveData {
     if (!data || typeof data !== 'object') return false
     const d = data as Record<string, unknown>
-    if (d.version !== CURRENT_VERSION) return false
+    const version = d.version as number
+    if (version !== 1 && version !== 2) return false
     if (d.gameName !== 'expedition-l') return false
     if (!d.map || !d.colonists || !d.foods || !d.beds || !d.buildings) return false
     if (!d.buildQueue || !d.camera || d.speed === undefined) return false
@@ -84,20 +85,7 @@ export class WorldSerializer {
       )
     )
 
-    const colonists = data.colonists.map(c => {
-      const colonist = new Colonist(c.id, c.name, c.color, c.position.x, c.position.y)
-      colonist.state = c.state as any
-      colonist.needs = { hunger: c.needs.hunger, sleep: c.needs.sleep }
-      colonist.targetPosition = c.targetPosition ? { x: c.targetPosition.x, y: c.targetPosition.y } : null
-      colonist.path = c.path.map((p: any) => ({ x: p.x, y: p.y }))
-      colonist.currentJob = c.currentJob ? { ...c.currentJob } : null
-      colonist.buildType = c.buildType
-      colonist.pendingBuildTaskId = null
-      ;(colonist as any).moveProgress = (c as any).moveProgress ?? 0
-      ;(colonist as any).jobTimer = (c as any).jobTimer ?? 0
-      colonist.onArrive = null
-      return colonist
-    })
+    const colonists = data.colonists.map(c => Colonist.fromJSON(c))
 
     const foods = data.foods.map(f => new Food(f.id, f.x, f.y))
     const beds = data.beds.map(b => new Bed(b.id, b.x, b.y))

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { WorldSerializer, SaveData } from '../game/persistence/worldSerializer'
+import { WorldSerializer, SaveData, SerializableWorld } from '../game/persistence/worldSerializer'
 import { GameMap } from '../game/world/map'
 import { TileType } from '../game/world/tile'
 import { Colonist } from '../game/colony/colonist'
@@ -7,6 +7,7 @@ import { Food } from '../game/entities/food'
 import { Bed } from '../game/entities/bed'
 import { Building, BuildQueue } from '../game/entities/building'
 import { Camera } from '../game/camera'
+import { GameSpeed } from '../store/types'
 
 function createFloorGrid(width: number, height: number) {
   return Array.from({ length: height }, () =>
@@ -18,7 +19,7 @@ function createFloorGrid(width: number, height: number) {
   )
 }
 
-function createTestWorld() {
+function createTestWorld(): SerializableWorld {
   const map = new GameMap(createFloorGrid(30, 20))
   const colonists = [
     new Colonist('c1', 'Alisa', '#ff6b6b', 5, 5),
@@ -30,7 +31,7 @@ function createTestWorld() {
   const buildQueue = new BuildQueue()
   buildQueue.add({ id: 'q1', type: 'wall', x: 12, y: 12, reservedBy: null })
   const camera = new Camera(100, 200)
-  const speed = 2
+  const speed: GameSpeed = 2
 
   return { map, colonists, foods, beds, buildings, buildQueue, camera, speed }
 }
@@ -73,14 +74,14 @@ describe('WorldSerializer', () => {
     const world = createTestWorld()
     const data = WorldSerializer.toJSON(world) as unknown as Record<string, unknown>
     data.version = 999
-    expect(WorldSerializer.validate(data as SaveData)).toBe(false)
+    expect(WorldSerializer.validate(data as unknown as SaveData)).toBe(false)
   })
 
   it('validate returns false for missing fields', () => {
     const world = createTestWorld()
     const data = WorldSerializer.toJSON(world) as unknown as Record<string, unknown>
     delete data.map
-    expect(WorldSerializer.validate(data as SaveData)).toBe(false)
+    expect(WorldSerializer.validate(data as unknown as SaveData)).toBe(false)
   })
 
   it('round-trip preserves map dimensions', () => {

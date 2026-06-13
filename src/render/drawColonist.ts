@@ -1,5 +1,6 @@
 import { Colonist } from '../game/colony/colonist'
 import { tileToScreen } from '../game/isoUtils'
+import { roundRect } from './roundRect'
 
 export function drawColonist(
   ctx: CanvasRenderingContext2D,
@@ -34,8 +35,9 @@ export function drawColonist(
   ctx.lineWidth = 0.5
   ctx.stroke()
 
-  // Eyes (only if not sleeping)
-  if (colonist.state !== 'sleeping') {
+  // Eyes (only if not sleeping — working phase with sleep job)
+  const isSleeping = colonist.state.phase === 'working' && colonist.state.job === 'sleep'
+  if (!isSleeping) {
     ctx.fillStyle = '#fff'
     ctx.fillRect(cx - 3, cy - 21, 2, 2)
     ctx.fillRect(cx + 1, cy - 21, 2, 2)
@@ -66,23 +68,6 @@ export function drawColonist(
   ctx.font = '9px system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.fillText(colonist.name, cx, barY - 5)
-}
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number,
-): void {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
 }
 
 function darken(hex: string, amount: number): string {

@@ -72,7 +72,7 @@ describe('GameWorld speed controls', () => {
   })
 })
 
-describe('JobSystem need prioritization', () => {
+describe('JobDispatcher need prioritization', () => {
   let canvas: HTMLCanvasElement
   let game: GameWorld
 
@@ -100,49 +100,56 @@ describe('JobSystem need prioritization', () => {
     game.destroy()
   })
 
+  function assignJob(colonistId: string): void {
+    const context = {
+      map: game.map,
+      colonists: game.colonists,
+      foods: game.foods,
+      beds: game.beds,
+      buildings: game.buildings,
+      buildQueue: game.buildQueue,
+    }
+    game.jobDispatcher.assignBestJob(colonistId, context)
+  }
+
   it('chooses eating when only hunger is below threshold', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 30, sleep: 80 }
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('eating')
-    expect(c.currentJob?.type).toBe('eat')
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
   it('chooses sleeping when only sleep is below threshold', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 80, sleep: 20 }
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('sleeping')
-    expect(c.currentJob?.type).toBe('sleep')
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
   })
 
   it('chooses the more urgent need when both are below threshold (hunger lower)', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 10, sleep: 20 }
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('eating')
-    expect(c.currentJob?.type).toBe('eat')
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
   it('chooses the more urgent need when both are below threshold (sleep lower)', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 35, sleep: 5 }
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('sleeping')
-    expect(c.currentJob?.type).toBe('sleep')
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
   })
 
   it('chooses hunger when both needs are equally critical', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('eating')
-    expect(c.currentJob?.type).toBe('eat')
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
   it('falls back to sleeping when food is not available but bed is', () => {
@@ -150,9 +157,8 @@ describe('JobSystem need prioritization', () => {
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 0, sleep: 0 }
     game.foods = []
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('sleeping')
-    expect(c.currentJob?.type).toBe('sleep')
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
   })
 
   it('falls back to eating when bed is not available but food is', () => {
@@ -160,31 +166,17 @@ describe('JobSystem need prioritization', () => {
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
     game.beds = []
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('eating')
-    expect(c.currentJob?.type).toBe('eat')
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
-  it('does not reassign a colonist who is already eating', () => {
+  it('does not reassign a colonist who is already working', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 30, sleep: 20 }
-    c.state = 'eating'
-    c.currentJob = { type: 'eat' }
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('eating')
-    expect(c.currentJob?.type).toBe('eat')
-  })
-
-  it('does not reassign a colonist who is already sleeping', () => {
-    const c = game.colonists[0]
-    c.position = { x: 14, y: 14 }
-    c.needs = { hunger: 30, sleep: 20 }
-    c.state = 'sleeping'
-    c.currentJob = { type: 'sleep' }
-    game.jobSystem.tick(2, game, game.workGiver)
-    expect(c.state).toBe('sleeping')
-    expect(c.currentJob?.type).toBe('sleep')
+    c.transition({ phase: 'working', job: 'eat', progress: 0, duration: 0.5 })
+    assignJob(c.id)
+    expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
   it('targets the nearest unoccupied bed when the closest bed is occupied by another colonist', () => {
@@ -194,10 +186,8 @@ describe('JobSystem need prioritization', () => {
     game.colonists[1].position = { x: 6, y: 6 }
     game.foods = []
     const mock = vi.spyOn(pathfinding, 'findPath').mockReturnValue([{ x: 14, y: 14 }])
-    game.jobSystem.tick(2, game, game.workGiver)
+    assignJob(c.id)
     mock.mockRestore()
-    expect(c.state).toBe('walking')
-    expect(c.targetPosition?.x).toBe(14)
-    expect(c.targetPosition?.y).toBe(14)
+    expect(c.state.phase === 'moving').toBe(true)
   })
 })

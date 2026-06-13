@@ -1,0 +1,69 @@
+import { JobDefinition, JobContext, ColonistLike } from '../types'
+import { Building } from '../../entities/building'
+import { TileType } from '../../world/tile'
+
+export const buildJob: JobDefinition = {
+  type: 'build',
+  label: 'Стройка',
+  duration: 0.5,
+
+  findTarget(colonist: ColonistLike, context: JobContext): { x: number; y: number } | null {
+    const task = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
+    if (task) return { x: task.x, y: task.y }
+
+    const firstUnreserved = context.buildQueue.all.find(t => t.reservedBy === null)
+    if (!firstUnreserved) return null
+
+    firstUnreserved.reservedBy = colonist.id
+    return { x: firstUnreserved.x, y: firstUnreserved.y }
+  },
+
+  onStart(_colonist: ColonistLike, _context: JobContext): void {},
+
+  onComplete(colonist: ColonistLike, context: JobContext): void {
+    const c = colonist as any
+    const buildQueue: any = context.buildQueue
+    const buildings: any[] = context.buildings as any[]
+    const map: any = context.map
+    const foods: any[] = context.foods as any[]
+    const beds: any[] = context.beds as any[]
+
+    const task = buildQueue.removeById(resolveTaskId(c, context))
+    if (!task) return
+
+    const tx = Math.round(c.position.x)
+    const ty = Math.round(c.position.y)
+
+    switch (task.type) {
+      case 'wall':
+        buildings.push(new Building(task.id, 'wall', tx, ty))
+        map.setTile(tx, ty, TileType.Wall)
+        break
+      case 'bed':
+        beds.push({ id: task.id, x: tx, y: ty })
+        map.setTile(tx, ty, TileType.Bed)
+        break
+      case 'food':
+        foods.push({ id: task.id, x: tx, y: ty })
+        map.setTile(tx, ty, TileType.Food)
+        break
+    }
+  },
+
+  onCancel(colonist: ColonistLike, context: JobContext): void {
+    for (const task of context.buildQueue.all) {
+      if (task.reservedBy === colonist.id) {
+        task.reservedBy = null
+        break
+      }
+    }
+  },
+
+  onTick(_colonist: ColonistLike, _dt: number): void {},
+}
+
+function resolveTaskId(colonist: any, context: any): string | undefined {
+  if (colonist._buildTaskId) return colonist._buildTaskId
+  const task = context.buildQueue.all.find((t: any) => t.reservedBy === colonist.id)
+  return task?.id
+}

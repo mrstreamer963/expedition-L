@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { GameMap } from '../game/world/map'
-import { Tile, TileType } from '../game/world/tile'
+import { TileType } from '../game/world/tile'
 
 describe('GameMap', () => {
   it('tileAt returns correct tile for valid coordinates', () => {
@@ -46,8 +46,8 @@ describe('GameMap', () => {
   })
 
   it('isWalkable returns correct value for known tile types', () => {
-    const grid = Array.from({ length: 20 }, (_, y) =>
-      Array.from({ length: 30 }, (_, x) => ({
+    const grid = Array.from({ length: 20 }, () =>
+      Array.from({ length: 30 }, () => ({
         type: TileType.Floor,
         walkable: true,
         occupantId: null,

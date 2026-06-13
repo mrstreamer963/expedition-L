@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { BuildQueue, BuildTask } from '../game/entities/building'
-import { WorkGiver } from '../game/colony/workGiver'
 
 function makeTask(overrides: Partial<BuildTask> = {}): BuildTask {
   return {
@@ -63,27 +62,4 @@ describe('BuildQueue', () => {
   })
 })
 
-describe('WorkGiver', () => {
-  it('reserve succeeds on unreserved task and sets reservedBy', () => {
-    const giver = new WorkGiver()
-    const task = makeTask()
-    const result = giver.reserve(task, 'colonist-1')
-    expect(result).toBe(true)
-    expect(task.reservedBy).toBe('colonist-1')
-  })
 
-  it('reserve fails on already reserved task', () => {
-    const giver = new WorkGiver()
-    const task = makeTask({ reservedBy: 'colonist-1' })
-    const result = giver.reserve(task, 'colonist-2')
-    expect(result).toBe(false)
-    expect(task.reservedBy).toBe('colonist-1')
-  })
-
-  it('release clears reservation', () => {
-    const giver = new WorkGiver()
-    const task = makeTask({ reservedBy: 'colonist-1' })
-    giver.release(task)
-    expect(task.reservedBy).toBeNull()
-  })
-})

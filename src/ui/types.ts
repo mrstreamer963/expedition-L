@@ -10,7 +10,7 @@ export interface UIColonist {
   id: string
   name: string
   color: string
-  state: string
+  stateLabel: string
   hunger: number
   sleep: number
   currentJob: string | null
