@@ -6,22 +6,25 @@ export const eatJob: JobDefinition = {
   duration: 0.5,
 
   findTarget(colonist: ColonistLike, context: JobContext): { x: number; y: number } | null {
+    const all = this.findAllTargets!(colonist, context)
+    return all.length > 0 ? all[0] : null
+  },
+
+  findAllTargets(colonist: ColonistLike, context: JobContext): { x: number; y: number }[] {
     const occupied = new Set(
       context.colonists
         .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
         .map(c => `${Math.round(c.position.x)},${Math.round(c.position.y)}`)
     )
-    let nearest: { x: number; y: number } | null = null
-    let minDist = Infinity
-    for (const food of context.foods) {
-      if (occupied.has(`${food.x},${food.y}`)) continue
-      const dist = Math.abs(food.x - colonist.position.x) + Math.abs(food.y - colonist.position.y)
-      if (dist < minDist) {
-        minDist = dist
-        nearest = { x: food.x, y: food.y }
-      }
-    }
-    return nearest
+    const foods = context.foods
+      .filter(f => !occupied.has(`${f.x},${f.y}`))
+      .map(f => ({ x: f.x, y: f.y }))
+    const cx = colonist.position.x
+    const cy = colonist.position.y
+    foods.sort((a, b) =>
+      (Math.abs(a.x - cx) + Math.abs(a.y - cy)) - (Math.abs(b.x - cx) + Math.abs(b.y - cy))
+    )
+    return foods
   },
 
   onStart(_colonist: ColonistLike, _context: JobContext): void {},

@@ -82,10 +82,15 @@ export class JobDispatcher {
     const def = JOB_REGISTRY.get(jobType)
     if (!def) return false
 
-    const target = def.findTarget(colonist, context)
-    if (!target) return false
+    const targets = def.findAllTargets?.(colonist, context) ?? (() => {
+      const t = def.findTarget(colonist, context)
+      return t ? [t] : []
+    })()
 
-    return this.sendTo(colonist, target, jobType, context)
+    for (const target of targets) {
+      if (this.sendTo(colonist, target, jobType, context)) return true
+    }
+    return false
   }
 
   private tryAssignBuild(colonist: Colonist, context: JobContext): boolean {
@@ -118,6 +123,11 @@ export class JobDispatcher {
 
     if (Math.round(colonist.position.x) === Math.round(target.x) &&
         Math.round(colonist.position.y) === Math.round(target.y)) {
+      const occupant = map.getOccupant(target.x, target.y)
+      if (occupant !== null && occupant !== colonist.id) {
+        this.cancelReservation(colonist, context)
+        return false
+      }
       colonist.transition({
         phase: 'working',
         job: jobType,

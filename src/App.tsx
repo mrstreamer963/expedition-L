@@ -19,6 +19,7 @@ function App() {
     const game = new GameWorld(canvas, savedState)
     game.onUiUpdate = (state) => setUiState({ ...state })
     gameRef.current = game
+    ;(window as any).__game = game
   }, [])
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {

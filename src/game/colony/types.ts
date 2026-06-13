@@ -40,6 +40,7 @@ export interface JobDefinition<C = JobContext> {
   duration: number
 
   findTarget(colonist: ColonistLike, context: C): Vec2 | null
+  findAllTargets?(colonist: ColonistLike, context: C): Vec2[]
   onStart(colonist: ColonistLike, context: C): void
   onComplete(colonist: ColonistLike, context: C): void
   onCancel(colonist: ColonistLike, context: C): void

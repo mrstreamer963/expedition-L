@@ -6,22 +6,25 @@ export const sleepJob: JobDefinition = {
   duration: 10,
 
   findTarget(colonist: ColonistLike, context: JobContext): { x: number; y: number } | null {
+    const all = this.findAllTargets!(colonist, context)
+    return all.length > 0 ? all[0] : null
+  },
+
+  findAllTargets(colonist: ColonistLike, context: JobContext): { x: number; y: number }[] {
     const occupied = new Set(
       context.colonists
         .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
         .map(c => `${Math.round(c.position.x)},${Math.round(c.position.y)}`)
     )
-    let nearest: { x: number; y: number } | null = null
-    let minDist = Infinity
-    for (const bed of context.beds) {
-      if (occupied.has(`${bed.x},${bed.y}`)) continue
-      const dist = Math.abs(bed.x - colonist.position.x) + Math.abs(bed.y - colonist.position.y)
-      if (dist < minDist) {
-        minDist = dist
-        nearest = { x: bed.x, y: bed.y }
-      }
-    }
-    return nearest
+    const beds = context.beds
+      .filter(b => !occupied.has(`${b.x},${b.y}`))
+      .map(b => ({ x: b.x, y: b.y }))
+    const cx = colonist.position.x
+    const cy = colonist.position.y
+    beds.sort((a, b) =>
+      (Math.abs(a.x - cx) + Math.abs(a.y - cy)) - (Math.abs(b.x - cx) + Math.abs(b.y - cy))
+    )
+    return beds
   },
 
   onStart(_colonist: ColonistLike, _context: JobContext): void {},

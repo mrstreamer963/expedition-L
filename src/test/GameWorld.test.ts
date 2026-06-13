@@ -191,3 +191,245 @@ describe('JobDispatcher need prioritization', () => {
     expect(c.state.phase === 'moving').toBe(true)
   })
 })
+
+describe('Colonist occupancy collision prevention', () => {
+  let canvas: HTMLCanvasElement
+  let game: GameWorld
+
+  beforeEach(() => {
+    canvas = document.createElement('canvas')
+    canvas.width = 960
+    canvas.height = 540
+    vi.spyOn(canvas, 'getContext').mockReturnValue({
+      canvas,
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      arc: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+    } as unknown as CanvasRenderingContext2D)
+    game = new GameWorld(canvas)
+  })
+
+  afterEach(() => {
+    game.destroy()
+  })
+
+  it('moving colonist aborts and reclaims current tile when next tile is occupied', () => {
+    const a = game.colonists[0]
+    const b = game.colonists[1]
+
+    a.position = { x: 5, y: 5 }
+    a.transition({ phase: 'working', job: 'eat', progress: 0, duration: 1 })
+    game.map.setOccupant(5, 5, a.id)
+
+    b.position = { x: 5, y: 4 }
+    game.map.setOccupant(5, 4, b.id)
+    b.transition({ phase: 'moving', job: 'walk', path: [{ x: 5, y: 5 }] })
+
+    b.update(1, game.map)
+
+    expect(b.state.phase).toBe('idle')
+    expect(game.map.getOccupant(5, 5)).toBe(a.id)
+    expect(game.map.getOccupant(5, 4)).toBe(b.id)
+  })
+
+  it('moving colonist reclaims current tile when tile was already released by sendTo', () => {
+    const a = game.colonists[0]
+    const b = game.colonists[1]
+
+    a.position = { x: 5, y: 5 }
+    a.transition({ phase: 'working', job: 'eat', progress: 0, duration: 1 })
+    game.map.setOccupant(5, 5, a.id)
+
+    // B's tile was released by sendTo before transitioning to moving
+    b.position = { x: 5, y: 4 }
+    b.transition({ phase: 'moving', job: 'walk', path: [{ x: 5, y: 5 }] })
+
+    b.update(1, game.map)
+
+    expect(b.state.phase).toBe('idle')
+    expect(game.map.getOccupant(5, 5)).toBe(a.id)
+    expect(game.map.getOccupant(5, 4)).toBe(b.id)
+  })
+
+  it('cannot target food tile already occupied by another colonist', () => {
+    const a = game.colonists[0]
+    const b = game.colonists[1]
+
+    a.position = { x: 8, y: 8 }
+    a.needs = { hunger: 30, sleep: 80 }
+    a.transition({ phase: 'working', job: 'eat', progress: 0, duration: 1 })
+    game.map.setOccupant(8, 8, a.id)
+
+    // B is far from all food, nearest food is (8,8) but A is there
+    b.position = { x: 20, y: 15 }
+    b.needs = { hunger: 30, sleep: 80 }
+
+    const context = {
+      map: game.map,
+      colonists: game.colonists,
+      foods: game.foods,
+      beds: game.beds,
+      buildings: game.buildings,
+      buildQueue: game.buildQueue,
+    }
+    game.jobDispatcher.assignBestJob(b.id, context)
+
+    expect(b.state.phase).toBe('moving')
+    if (b.state.phase === 'moving') {
+      const dest = b.state.path[b.state.path.length - 1]
+      expect(dest.x === 8 && dest.y === 8).toBe(false)
+    }
+  })
+
+  it('cannot target occupied bed when colonist is already standing on it', () => {
+    const a = game.colonists[0]
+    const b = game.colonists[1]
+
+    a.position = { x: 6, y: 6 }
+    a.needs = { hunger: 80, sleep: 20 }
+    a.transition({ phase: 'working', job: 'sleep', progress: 0, duration: 10 })
+    game.map.setOccupant(6, 6, a.id)
+
+    b.position = { x: 6, y: 6 }
+    b.needs = { hunger: 80, sleep: 20 }
+
+    const context = {
+      map: game.map,
+      colonists: game.colonists,
+      foods: [],
+      beds: game.beds,
+      buildings: game.buildings,
+      buildQueue: game.buildQueue,
+    }
+    game.jobDispatcher.assignBestJob(b.id, context)
+
+    expect(game.map.getOccupant(6, 6)).toBe(a.id)
+    expect(b.state.phase).not.toBe('working')
+  })
+
+  it('sendTo direct-to-working path rejects occupied tile', () => {
+    const a = game.colonists[0]
+    const b = game.colonists[1]
+
+    a.position = { x: 8, y: 8 }
+    a.needs = { hunger: 30, sleep: 80 }
+    a.transition({ phase: 'working', job: 'eat', progress: 0, duration: 1 })
+    game.map.setOccupant(8, 8, a.id)
+
+    // B on the same tile, only one food exists
+    b.position = { x: 8, y: 8 }
+    b.needs = { hunger: 30, sleep: 80 }
+
+    const context = {
+      map: game.map,
+      colonists: game.colonists,
+      foods: game.foods.filter(f => f.x === 8 && f.y === 8),
+      beds: [],
+      buildings: game.buildings,
+      buildQueue: game.buildQueue,
+    }
+    game.jobDispatcher.assignBestJob(b.id, context)
+
+    expect(b.state.phase).toBe('idle')
+    expect(game.map.getOccupant(8, 8)).toBe(a.id)
+  })
+
+  it('retries alternative food when nearest food path cannot be found', () => {
+    const b = game.colonists[0]
+    b.position = { x: 5, y: 5 }
+    b.needs = { hunger: 30, sleep: 80 }
+
+    game.foods = [
+      { id: 'f1', x: 8, y: 5 },
+      { id: 'f2', x: 12, y: 5 },
+    ]
+    game.beds = []
+
+    const original = pathfinding.findPath
+    const mock = vi.spyOn(pathfinding, 'findPath').mockImplementation((map, start, end, occupied) => {
+      if (end.x === 8 && end.y === 5) return []
+      return original(map, start, end, occupied)
+    })
+
+    const context = {
+      map: game.map,
+      colonists: game.colonists,
+      foods: game.foods,
+      beds: [],
+      buildings: game.buildings,
+      buildQueue: game.buildQueue,
+    }
+    game.jobDispatcher.assignBestJob(b.id, context)
+
+    mock.mockRestore()
+
+    expect(b.state.phase).toBe('moving')
+    if (b.state.phase === 'moving') {
+      const dest = b.state.path[b.state.path.length - 1]
+      expect(dest).toEqual({ x: 12, y: 5 })
+    }
+  })
+
+  it('retries alternative bed when nearest bed path cannot be found', () => {
+    const b = game.colonists[0]
+    b.position = { x: 5, y: 5 }
+    b.needs = { hunger: 80, sleep: 20 }
+
+    game.foods = []
+    game.beds = [
+      { id: 'bed1', x: 6, y: 6 },
+      { id: 'bed2', x: 14, y: 14 },
+    ]
+
+    const original = pathfinding.findPath
+    const mock = vi.spyOn(pathfinding, 'findPath').mockImplementation((map, start, end, occupied) => {
+      if (end.x === 6 && end.y === 6) return []
+      return original(map, start, end, occupied)
+    })
+
+    const context = {
+      map: game.map,
+      colonists: game.colonists,
+      foods: [],
+      beds: game.beds,
+      buildings: game.buildings,
+      buildQueue: game.buildQueue,
+    }
+    game.jobDispatcher.assignBestJob(b.id, context)
+
+    mock.mockRestore()
+
+    expect(b.state.phase).toBe('moving')
+    if (b.state.phase === 'moving') {
+      const dest = b.state.path[b.state.path.length - 1]
+      expect(dest).toEqual({ x: 14, y: 14 })
+    }
+  })
+
+  it('two colonists sharing a tile after updateMoving is impossible', () => {
+    const a = game.colonists[0]
+    const b = game.colonists[1]
+
+    a.position = { x: 5, y: 5 }
+    game.map.setOccupant(5, 5, a.id)
+
+    b.position = { x: 7, y: 5 }
+    game.map.setOccupant(7, 5, b.id)
+    b.transition({ phase: 'moving', job: 'walk', path: [{ x: 6, y: 5 }, { x: 5, y: 5 }] })
+
+    // dt=1 gives speed 3 units, enough to move 1-2 tiles
+    b.update(1, game.map)
+
+    expect(b.state.phase).toBe('idle')
+    expect(game.map.getOccupant(5, 5)).toBe(a.id)
+    // B should be somewhere but NOT at (5,5)
+    expect( Math.round(b.position.x) !== 5 || Math.round(b.position.y) !== 5 ).toBe(true)
+  })
+})

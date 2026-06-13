@@ -29,6 +29,11 @@ export class Colonist {
   update(dt: number, map: GameMap): void {
     const s = this.state
 
+    if (s.phase === 'idle') {
+      this.snapIdlePosition(map)
+      return
+    }
+
     if (s.phase === 'moving') {
       this.updateMoving(dt, map, s)
     }
@@ -65,6 +70,7 @@ export class Colonist {
         const occupant = map.getOccupant(Math.round(next.x), Math.round(next.y))
         if (occupant !== null && occupant !== this.id) {
           this.state = { phase: 'idle' }
+          this.reclaimCurrentTile(map)
           return
         }
 
@@ -72,6 +78,12 @@ export class Colonist {
         map.setOccupant(Math.round(this.position.x), Math.round(this.position.y), this.id)
         s.path.shift()
       } else {
+        const occupant = map.getOccupant(Math.round(next.x), Math.round(next.y))
+        if (occupant !== null && occupant !== this.id) {
+          this.state = { phase: 'idle' }
+          this.reclaimCurrentTile(map)
+          return
+        }
         const t = remaining / dist
         this.position = {
           x: this.position.x + dx * t,
@@ -82,8 +94,59 @@ export class Colonist {
     }
 
     if (s.path.length === 0) {
+      const ftx = Math.round(this.position.x)
+      const fty = Math.round(this.position.y)
+      if (map.getOccupant(ftx, fty) !== null && map.getOccupant(ftx, fty) !== this.id) {
+        this.state = { phase: 'idle' }
+        this.reclaimCurrentTile(map)
+        return
+      }
       this.state = { phase: 'working', job: s.job, progress: 0, duration: 0 }
     }
+  }
+
+  private reclaimCurrentTile(map: GameMap): void {
+    const rx = Math.round(this.position.x)
+    const ry = Math.round(this.position.y)
+    if (map.getOccupant(rx, ry) === null) {
+      this.position = { x: rx, y: ry }
+      map.setOccupant(rx, ry, this.id)
+      return
+    }
+    const fx = Math.floor(this.position.x)
+    const fy = Math.floor(this.position.y)
+    if ((fx !== rx || fy !== ry) && map.getOccupant(fx, fy) === null) {
+      this.position = { x: fx, y: fy }
+      map.setOccupant(fx, fy, this.id)
+      return
+    }
+    const cx = Math.ceil(this.position.x)
+    const cy = Math.ceil(this.position.y)
+    if ((cx !== rx || cy !== ry) && (cx !== fx || cy !== fy) && map.getOccupant(cx, cy) === null) {
+      this.position = { x: cx, y: cy }
+      map.setOccupant(cx, cy, this.id)
+      return
+    }
+    for (let radius = 1; radius <= 3; radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          if (dx === 0 && dy === 0) continue
+          if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue
+          const sx = rx + dx
+          const sy = ry + dy
+          if (sx < 0 || sx >= map.width || sy < 0 || sy >= map.height) continue
+          if (map.getOccupant(sx, sy) === null && map.isWalkable(sx, sy)) {
+            this.position = { x: sx, y: sy }
+            map.setOccupant(sx, sy, this.id)
+            return
+          }
+        }
+      }
+    }
+  }
+
+  private snapIdlePosition(map: GameMap): void {
+    this.reclaimCurrentTile(map)
   }
 
   private updateWorking(dt: number, s: ColonistState & { phase: 'working' }): void {
