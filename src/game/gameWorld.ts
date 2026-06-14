@@ -52,6 +52,7 @@ export class GameWorld {
   private readonly UI_UPDATE_INTERVAL = 0.5
 
   private autoSaveHandler: (() => void) | null = null
+  private cleanupFns: (() => void)[] = []
 
   constructor(canvas: HTMLCanvasElement, savedState?: SaveData) {
     this.canvas = canvas
@@ -64,12 +65,17 @@ export class GameWorld {
     JOB_REGISTRY.register(walkJob)
 
     this.jobDispatcher = new JobDispatcher()
-    eventBus.on('colonist_idle', (data) => {
+    const idleHandler = (data: { colonistId: string }) => {
       this.jobDispatcher.assignBestJob(data.colonistId, this.getJobContext())
-    })
-    eventBus.on('build_queued', (data) => {
+    }
+    eventBus.on('colonist_idle', idleHandler)
+    this.cleanupFns.push(() => eventBus.off('colonist_idle', idleHandler))
+
+    const buildHandler = (data: { task: BuildTask }) => {
       this.jobDispatcher.onEvent({ type: 'build_queued', task: data.task }, this.getJobContext())
-    })
+    }
+    eventBus.on('build_queued', buildHandler)
+    this.cleanupFns.push(() => eventBus.off('build_queued', buildHandler))
     this.buildQueue = new BuildQueue()
 
     if (savedState) {
@@ -387,6 +393,8 @@ export class GameWorld {
   }
 
   destroy(): void {
+    this.cleanupFns.forEach(fn => fn())
+    this.cleanupFns = []
     this.gameLoop.destroy()
     if (this.autoSaveHandler) {
       window.removeEventListener('beforeunload', this.autoSaveHandler)
