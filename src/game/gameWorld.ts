@@ -20,6 +20,7 @@ import { Food } from './entities/food'
 import { Bed } from './entities/bed'
 import { Building, BuildQueue, BuildTask } from './entities/building'
 import { NeedSystem } from './systems/needSystem'
+import { StatusSystem } from './systems/statusSystem'
 import { WorldSerializer, SaveData } from './persistence/worldSerializer'
 
 export class GameWorld {
@@ -46,6 +47,7 @@ export class GameWorld {
   private readonly UI_UPDATE_INTERVAL = 0.5
 
   private needSystem = new NeedSystem()
+  private statusSystem = new StatusSystem()
   private autoSaveHandler: (() => void) | null = null
   private cleanupFns: (() => void)[] = []
 
@@ -257,6 +259,7 @@ export class GameWorld {
     }
 
     this.needSystem.update(dt, this.colonists)
+    this.statusSystem.update(dt, this.colonists)
 
     for (const colonist of this.colonists) {
       if (colonist.state.phase === 'idle') {
@@ -289,6 +292,7 @@ export class GameWorld {
         sleep: Math.round(c.needs.sleep),
         currentJob: c.state.phase === 'working' || c.state.phase === 'moving' || c.state.phase === 'done' ? c.state.job : null,
         position: c.position,
+        statuses: [...c.statuses],
       })),
       buildMode: this.buildMode,
       hoveredTile: this.hoveredTile,
