@@ -1,5 +1,6 @@
 import { GameEvent, JobContext, ColonistLike } from './types'
 import { JOB_REGISTRY } from './jobRegistry'
+import { STATUS_REGISTRY } from './statusRegistry'
 import { findPath } from '../world/pathfinding'
 import { Colonist } from './colonist'
 
@@ -47,29 +48,19 @@ export class JobDispatcher {
   assignBestJob(colonistId: string, context: JobContext): void {
     const colonist = context.colonists.find(c => c.id === colonistId)
     if (!colonist || colonist.state.phase !== 'idle') return
-    const hungerBelow = colonist.needs.hunger < 40
-    const sleepBelow = colonist.needs.sleep < 25
-    if (hungerBelow && sleepBelow) {
-      const hungerRatio = colonist.needs.hunger / 40
-      const sleepRatio = colonist.needs.sleep / 25
-      if (sleepRatio < hungerRatio) {
-        if (this.tryAssignNeed(colonist, 'sleep', context)) return
-        if (this.tryAssignNeed(colonist, 'hunger', context)) return
-      } else {
-        if (this.tryAssignNeed(colonist, 'hunger', context)) return
-        if (this.tryAssignNeed(colonist, 'sleep', context)) return
-      }
-    } else {
-      if (this.tryAssignNeed(colonist, 'hunger', context)) return
-      if (this.tryAssignNeed(colonist, 'sleep', context)) return
+
+    const statuses = STATUS_REGISTRY.getAll()
+      .filter(def => colonist.statuses.has(def.type))
+      .sort((a, b) => a.priority - b.priority)
+
+    for (const status of statuses) {
+      if (this.tryAssignJob(colonist, status.jobType, context)) return
     }
+
     if (this.tryAssignBuild(colonist, context)) return
   }
 
-  private tryAssignNeed(colonist: ColonistLike, need: 'hunger' | 'sleep', context: JobContext): boolean {
-    const threshold = need === 'hunger' ? 40 : 25
-    if (colonist.needs[need] >= threshold) return false
-    const jobType = need === 'hunger' ? 'eat' : 'sleep'
+  private tryAssignJob(colonist: ColonistLike, jobType: string, context: JobContext): boolean {
     const def = JOB_REGISTRY.get(jobType)
     if (!def) return false
     const targets = def.findAllTargets?.(colonist, context) ?? (() => {

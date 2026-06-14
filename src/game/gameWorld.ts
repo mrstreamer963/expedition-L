@@ -8,10 +8,13 @@ import { GameSpeed } from '../store/types'
 import { JobDispatcher } from './colony/jobDispatcher'
 import { eventBus } from './eventBus'
 import { JOB_REGISTRY } from './colony/jobRegistry'
+import { STATUS_REGISTRY } from './colony/statusRegistry'
 import { eatJob } from './colony/jobs/eat'
 import { sleepJob } from './colony/jobs/sleep'
 import { buildJob } from './colony/jobs/build'
 import { walkJob } from './colony/jobs/walk'
+import { hungryStatus } from './colony/statuses/hungry'
+import { tiredStatus } from './colony/statuses/tired'
 import { JobContext } from './colony/types'
 import { Food } from './entities/food'
 import { Bed } from './entities/bed'
@@ -51,6 +54,8 @@ export class GameWorld {
     JOB_REGISTRY.register(sleepJob)
     JOB_REGISTRY.register(buildJob)
     JOB_REGISTRY.register(walkJob)
+    STATUS_REGISTRY.register(hungryStatus)
+    STATUS_REGISTRY.register(tiredStatus)
 
     this.jobDispatcher = new JobDispatcher()
     const idleHandler = (data: { colonistId: string }) => {

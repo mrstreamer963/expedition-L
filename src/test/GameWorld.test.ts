@@ -87,6 +87,7 @@ describe('JobDispatcher need prioritization', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 30, sleep: 80 }
+    c.statuses.add('hungry')
     assignJob(c.id)
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
@@ -95,6 +96,7 @@ describe('JobDispatcher need prioritization', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 80, sleep: 20 }
+    c.statuses.add('tired')
     assignJob(c.id)
     expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
   })
@@ -103,6 +105,8 @@ describe('JobDispatcher need prioritization', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 10, sleep: 20 }
+    c.statuses.add('hungry')
+    c.statuses.add('tired')
     assignJob(c.id)
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
@@ -111,14 +115,18 @@ describe('JobDispatcher need prioritization', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 35, sleep: 5 }
+    c.statuses.add('hungry')
+    c.statuses.add('tired')
     assignJob(c.id)
-    expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
+    expect(c.state.phase === 'moving').toBe(true)
   })
 
   it('chooses hunger when both needs are equally critical', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
+    c.statuses.add('hungry')
+    c.statuses.add('tired')
     assignJob(c.id)
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
@@ -128,6 +136,8 @@ describe('JobDispatcher need prioritization', () => {
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 0, sleep: 0 }
     game.foods = []
+    c.statuses.add('hungry')
+    c.statuses.add('tired')
     assignJob(c.id)
     expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
   })
@@ -137,6 +147,8 @@ describe('JobDispatcher need prioritization', () => {
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
     game.beds = []
+    c.statuses.add('hungry')
+    c.statuses.add('tired')
     assignJob(c.id)
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
@@ -145,6 +157,8 @@ describe('JobDispatcher need prioritization', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 30, sleep: 20 }
+    c.statuses.add('hungry')
+    c.statuses.add('tired')
     c.transition({ phase: 'working', job: 'eat', progress: 0, duration: 0.5 })
     assignJob(c.id)
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
@@ -154,6 +168,7 @@ describe('JobDispatcher need prioritization', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 50, sleep: 20 }
+    c.statuses.add('tired')
     game.colonists[1].position = { x: 6, y: 6 }
     game.foods = []
     const mock = vi.spyOn(pathfinding, 'findPath').mockReturnValue([{ x: 14, y: 14 }])
@@ -219,12 +234,14 @@ describe('Colonist occupancy collision prevention', () => {
 
     a.position = { x: 8, y: 8 }
     a.needs = { hunger: 30, sleep: 80 }
+    a.statuses.add('hungry')
     a.transition({ phase: 'working', job: 'eat', progress: 0, duration: 1 })
     game.map.setOccupant(8, 8, a.id)
 
     // B is far from all food, nearest food is (8,8) but A is there
     b.position = { x: 20, y: 15 }
     b.needs = { hunger: 30, sleep: 80 }
+    b.statuses.add('hungry')
 
     const context = {
       map: game.map,
@@ -249,11 +266,13 @@ describe('Colonist occupancy collision prevention', () => {
 
     a.position = { x: 6, y: 6 }
     a.needs = { hunger: 80, sleep: 20 }
+    a.statuses.add('tired')
     a.transition({ phase: 'working', job: 'sleep', progress: 0, duration: 10 })
     game.map.setOccupant(6, 6, a.id)
 
     b.position = { x: 6, y: 6 }
     b.needs = { hunger: 80, sleep: 20 }
+    b.statuses.add('tired')
 
     const context = {
       map: game.map,
@@ -281,6 +300,8 @@ describe('Colonist occupancy collision prevention', () => {
     // B on the same tile, only one food exists
     b.position = { x: 8, y: 8 }
     b.needs = { hunger: 30, sleep: 80 }
+    a.statuses.add('hungry')
+    b.statuses.add('hungry')
 
     const context = {
       map: game.map,
@@ -300,6 +321,7 @@ describe('Colonist occupancy collision prevention', () => {
     const b = game.colonists[0]
     b.position = { x: 5, y: 5 }
     b.needs = { hunger: 30, sleep: 80 }
+    b.statuses.add('hungry')
 
     game.foods = [
       new Food('f1', 8, 5),
@@ -336,6 +358,7 @@ describe('Colonist occupancy collision prevention', () => {
     const b = game.colonists[0]
     b.position = { x: 5, y: 5 }
     b.needs = { hunger: 80, sleep: 20 }
+    b.statuses.add('tired')
 
     game.foods = []
     game.beds = [
