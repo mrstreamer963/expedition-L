@@ -303,10 +303,9 @@ export class GameWorld {
         const job = sAfter.job
         const def = JOB_REGISTRY.get(job)
         if (def) {
-          def.onComplete(colonist, context as any)
+          def.onComplete(colonist, context)
         }
         colonist.transition({ phase: 'idle' })
-        this.occupyTile(colonist.position.x, colonist.position.y, colonist.id)
         this.jobDispatcher.onEvent({ type: 'colonist_idle', colonistId: colonist.id }, context)
       } else if (sAfter.phase === 'idle' && s.phase === 'moving') {
         this.jobDispatcher.onEvent({ type: 'colonist_idle', colonistId: colonist.id }, context)
