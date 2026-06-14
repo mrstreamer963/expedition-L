@@ -1,31 +1,10 @@
-import { GameMap } from '../game/world/map'
-import { Colonist } from '../game/colony/colonist'
-import { Food } from '../game/entities/food'
-import { Bed } from '../game/entities/bed'
-import { Building, BuildTask } from '../game/entities/building'
-import { BuildMode } from '../ui/types'
 import { renderMap } from './canvas'
 import { drawColonist } from './drawColonist'
 import { drawShadow } from './drawShadow'
 import { tileToScreen } from '../game/isoUtils'
 import { renderEntities } from './renderEntities'
 import { renderBuildQueueGhosts, renderHighlight, renderSelection, renderPaths } from './renderOverlay'
-
-export interface RenderSnapshot {
-  offsetX: number
-  offsetY: number
-  canvasWidth: number
-  canvasHeight: number
-  map: GameMap
-  colonists: Colonist[]
-  foods: Food[]
-  beds: Bed[]
-  buildings: Building[]
-  buildQueueTasks: BuildTask[]
-  hoveredTile: { x: number; y: number } | null
-  selectedColonistId: string | null
-  buildMode: BuildMode
-}
+import { RenderSnapshot } from './snapshot'
 
 export function renderWorld(ctx: CanvasRenderingContext2D, snap: RenderSnapshot): void {
   ctx.clearRect(0, 0, snap.canvasWidth, snap.canvasHeight)

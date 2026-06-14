@@ -23,7 +23,7 @@ import { Building, BuildQueue, BuildTask } from './entities/building'
 import { NeedSystem } from './systems/needSystem'
 import { WorldSerializer, SaveData } from './persistence/worldSerializer'
 import { saveToLocalStorage, AUTOSAVE_KEY } from './persistence/storage'
-import { RenderSnapshot } from '../render/worldRenderer'
+import { RenderSnapshot, collectSnapshot } from '../render/snapshot'
 
 export class GameWorld {
   map: GameMap
@@ -349,9 +349,8 @@ export class GameWorld {
   }
 
   private collectSnapshot(): RenderSnapshot {
-    return {
-      offsetX: this.camera.offsetX,
-      offsetY: this.camera.offsetY,
+    return collectSnapshot({
+      camera: this.camera,
       canvasWidth: this.width,
       canvasHeight: this.height,
       map: this.map,
@@ -359,11 +358,11 @@ export class GameWorld {
       foods: this.foods,
       beds: this.beds,
       buildings: this.buildings,
-      buildQueueTasks: this.buildQueue.all,
+      buildQueue: this.buildQueue,
       hoveredTile: this.hoveredTile,
       selectedColonistId: this.selectedColonistId,
       buildMode: this.buildMode,
-    }
+    })
   }
 
   private emitUiState(): void {
