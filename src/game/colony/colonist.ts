@@ -185,6 +185,7 @@ export class Colonist {
       position: { ...this.position },
       fsmState: this.state,
       needs: { ...this.needs },
+      statuses: [...this.statuses],
       reservedBuildTaskId: this.reservedBuildTaskId,
     }
   }
@@ -201,6 +202,7 @@ export class Colonist {
       c.state = { phase: 'idle' }
     }
 
+    c.statuses = new Set(data.statuses ?? [])
     c.reservedBuildTaskId = data.reservedBuildTaskId ?? null
 
     return c
