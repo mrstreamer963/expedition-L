@@ -15,6 +15,10 @@ export class StatusRegistry {
   getAll(): StatusDefinition[] {
     return Array.from(this.defs.values())
   }
+
+  clear(): void {
+    this.defs.clear()
+  }
 }
 
 export const STATUS_REGISTRY = new StatusRegistry()

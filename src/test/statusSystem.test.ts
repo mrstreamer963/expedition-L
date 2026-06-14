@@ -7,6 +7,7 @@ import { tiredStatus } from '../game/colony/statuses/tired'
 
 describe('StatusSystem', () => {
   beforeEach(() => {
+    STATUS_REGISTRY.clear()
     STATUS_REGISTRY.register(hungryStatus)
     STATUS_REGISTRY.register(tiredStatus)
   })
