@@ -31,7 +31,6 @@ export class Colonist {
     const s = this.state
 
     if (s.phase === 'idle') {
-      this.snapIdlePosition(map)
       return
     }
 
@@ -106,17 +105,25 @@ export class Colonist {
     }
   }
 
+  private clearOccupant(map: GameMap, x: number, y: number): void {
+    if (map.getOccupant(x, y) === this.id) {
+      map.setOccupant(x, y, null)
+    }
+  }
+
   private reclaimCurrentTile(map: GameMap): void {
     const rx = Math.round(this.position.x)
     const ry = Math.round(this.position.y)
-    if (map.getOccupant(rx, ry) === null) {
+    const occ = map.getOccupant(rx, ry)
+    if (occ === null || occ === this.id) {
       this.position = { x: rx, y: ry }
-      map.setOccupant(rx, ry, this.id)
+      if (occ === null) map.setOccupant(rx, ry, this.id)
       return
     }
     const fx = Math.floor(this.position.x)
     const fy = Math.floor(this.position.y)
     if ((fx !== rx || fy !== ry) && map.getOccupant(fx, fy) === null) {
+      this.clearOccupant(map, rx, ry)
       this.position = { x: fx, y: fy }
       map.setOccupant(fx, fy, this.id)
       return
@@ -124,6 +131,7 @@ export class Colonist {
     const cx = Math.ceil(this.position.x)
     const cy = Math.ceil(this.position.y)
     if ((cx !== rx || cy !== ry) && (cx !== fx || cy !== fy) && map.getOccupant(cx, cy) === null) {
+      this.clearOccupant(map, rx, ry)
       this.position = { x: cx, y: cy }
       map.setOccupant(cx, cy, this.id)
       return
@@ -137,6 +145,7 @@ export class Colonist {
           const sy = ry + dy
           if (sx < 0 || sx >= map.width || sy < 0 || sy >= map.height) continue
           if (map.getOccupant(sx, sy) === null && map.isWalkable(sx, sy)) {
+            this.clearOccupant(map, rx, ry)
             this.position = { x: sx, y: sy }
             map.setOccupant(sx, sy, this.id)
             return
@@ -144,10 +153,6 @@ export class Colonist {
         }
       }
     }
-  }
-
-  private snapIdlePosition(map: GameMap): void {
-    this.reclaimCurrentTile(map)
   }
 
   private updateWorking(dt: number, s: ColonistState & { phase: 'working' }): void {
