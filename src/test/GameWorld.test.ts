@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { GameWorld } from '../game/gameWorld'
 import { Camera } from '../game/camera'
+import { Food } from '../game/entities/food'
+import { Bed } from '../game/entities/bed'
 import * as pathfinding from '../game/world/pathfinding'
 
 describe('GameWorld speed controls', () => {
@@ -300,8 +302,8 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 30, sleep: 80 }
 
     game.foods = [
-      { id: 'f1', x: 8, y: 5 },
-      { id: 'f2', x: 12, y: 5 },
+      new Food('f1', 8, 5),
+      new Food('f2', 12, 5),
     ]
     game.beds = []
 
@@ -337,8 +339,8 @@ describe('Colonist occupancy collision prevention', () => {
 
     game.foods = []
     game.beds = [
-      { id: 'bed1', x: 6, y: 6 },
-      { id: 'bed2', x: 14, y: 14 },
+      new Bed('bed1', 6, 6),
+      new Bed('bed2', 14, 14),
     ]
 
     const original = pathfinding.findPath

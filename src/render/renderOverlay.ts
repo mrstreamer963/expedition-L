@@ -2,7 +2,7 @@ import { TILE_WIDTH, TILE_HEIGHT, TileType } from '../game/world/tile'
 import { tileToScreen } from '../game/isoUtils'
 import { drawWall3D } from './drawWall3D'
 import { roundRect } from './roundRect'
-import { RenderSnapshot } from './worldRenderer'
+import { RenderSnapshot } from './snapshot'
 
 function canBuildAt(x: number, y: number, snap: RenderSnapshot): boolean {
   const tile = snap.map.tileAt(x, y)

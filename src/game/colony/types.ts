@@ -1,4 +1,4 @@
-import { BuildTask, BuildingType } from '../entities/building'
+import { BuildTask, BuildQueue, BuildingType } from '../entities/building'
 import { GameMap } from '../world/map'
 
 export interface Vec2 {
@@ -24,7 +24,7 @@ export interface JobContext {
   foods: { id: string; x: number; y: number }[]
   beds: { id: string; x: number; y: number }[]
   buildings: { id: string; type: BuildingType; x: number; y: number }[]
-  buildQueue: { all: BuildTask[] }
+  buildQueue: BuildQueue
 }
 
 export interface ColonistLike {

@@ -3,7 +3,7 @@ import { tileToScreen } from '../game/isoUtils'
 import { drawShadow } from './drawShadow'
 import { drawWall3D } from './drawWall3D'
 import { roundRect } from './roundRect'
-import { RenderSnapshot } from './worldRenderer'
+import { RenderSnapshot } from './snapshot'
 
 export function renderEntities(ctx: CanvasRenderingContext2D, snap: RenderSnapshot): void {
   const hh = TILE_HEIGHT / 2

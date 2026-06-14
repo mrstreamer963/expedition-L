@@ -24,7 +24,9 @@ export const buildJob: JobDefinition = {
 
   onComplete(colonist: ColonistLike, context: JobContext): void {
     const { buildQueue, buildings, map, foods, beds } = context
-    const task = buildQueue.removeById(resolveTaskId(colonist, context))
+    const taskId = resolveTaskId(colonist, context)
+    if (!taskId) return
+    const task = buildQueue.removeById(taskId)
     if (!task) return
     const tx = Math.round(colonist.position.x)
     const ty = Math.round(colonist.position.y)
