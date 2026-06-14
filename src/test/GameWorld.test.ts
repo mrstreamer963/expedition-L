@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { GameWorld } from '../game/gameWorld'
-import { Camera } from '../game/camera'
+import { Camera } from '../geometry/camera'
 import { Food } from '../game/entities/food'
 import { Bed } from '../game/entities/bed'
 import * as pathfinding from '../game/world/pathfinding'

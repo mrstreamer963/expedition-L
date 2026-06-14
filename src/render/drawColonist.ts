@@ -1,5 +1,5 @@
 import { Colonist } from '../game/colony/colonist'
-import { tileToScreen } from '../game/isoUtils'
+import { tileToScreen } from '../geometry/isoUtils'
 import { roundRect } from './roundRect'
 
 export function drawColonist(

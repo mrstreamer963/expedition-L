@@ -1,6 +1,6 @@
-import { Camera } from '../camera'
+import { Camera } from '../../geometry/camera'
 import { GameMap } from '../world/map'
-import { screenToTile } from '../isoUtils'
+import { screenToTile } from '../../geometry/isoUtils'
 
 export class InputHandler {
   private keys: Set<string> = new Set()

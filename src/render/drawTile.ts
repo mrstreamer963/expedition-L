@@ -1,5 +1,5 @@
 import { Tile, TILE_DATA, TILE_WIDTH, TILE_HEIGHT } from '../game/world/tile'
-import { tileToScreen } from '../game/isoUtils'
+import { tileToScreen } from '../geometry/isoUtils'
 import { getTilePattern } from './textures'
 
 export function drawTile(

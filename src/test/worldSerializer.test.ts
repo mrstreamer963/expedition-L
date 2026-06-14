@@ -6,7 +6,7 @@ import { Colonist } from '../game/colony/colonist'
 import { Food } from '../game/entities/food'
 import { Bed } from '../game/entities/bed'
 import { Building, BuildQueue } from '../game/entities/building'
-import { Camera } from '../game/camera'
+import { Camera } from '../geometry/camera'
 import { GameSpeed } from '../store/types'
 
 function createFloorGrid(width: number, height: number) {

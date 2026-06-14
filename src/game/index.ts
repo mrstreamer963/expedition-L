@@ -12,7 +12,7 @@ export { Food } from './entities/food'
 export { Bed } from './entities/bed'
 export { Building, BuildQueue } from './entities/building'
 export type { BuildTask, BuildingType } from './entities/building'
-export { Camera } from './camera'
+
 export { NeedSystem } from './systems/needSystem'
 export { eventBus } from './eventBus'
 export type { EventBus } from './eventBus'

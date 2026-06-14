@@ -1,4 +1,4 @@
-import { Camera } from '../game/camera'
+import { Camera } from '../geometry/camera'
 import { GameWorld } from '../game/gameWorld'
 import { GameLoop } from '../game/gameLoop'
 import { InputHandler } from '../game/input/inputHandler'

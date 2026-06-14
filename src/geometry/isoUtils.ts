@@ -1,4 +1,4 @@
-import { TILE_WIDTH, TILE_HEIGHT } from './world/tile'
+import { TILE_WIDTH, TILE_HEIGHT } from '../game/world/tile'
 
 // Convert tile coordinates to screen coordinates (isometric projection)
 export function tileToScreen(tx: number, ty: number): { x: number; y: number } {

@@ -1,7 +1,7 @@
 import { renderMap } from './canvas'
 import { drawColonist } from './drawColonist'
 import { drawShadow } from './drawShadow'
-import { tileToScreen } from '../game/isoUtils'
+import { tileToScreen } from '../geometry/isoUtils'
 import { renderEntities } from './renderEntities'
 import { renderBuildQueueGhosts, renderHighlight, renderSelection, renderPaths } from './renderOverlay'
 import { RenderSnapshot } from './snapshot'

@@ -1,5 +1,5 @@
 import { TILE_HEIGHT } from '../game/world/tile'
-import { tileToScreen } from '../game/isoUtils'
+import { tileToScreen } from '../geometry/isoUtils'
 import { drawShadow } from './drawShadow'
 import { drawWall3D } from './drawWall3D'
 import { roundRect } from './roundRect'
