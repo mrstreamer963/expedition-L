@@ -57,6 +57,16 @@ function ColonistPanel({ colonist }: ColonistPanelProps) {
         {stateLabels[colonist.stateLabel] || colonist.stateLabel}
         {colonist.currentJob && ` → ${colonist.currentJob}`}
       </div>
+
+      {colonist.statuses.length > 0 && (
+        <div style={styles.statusRow}>
+          {colonist.statuses.map(s => (
+            <span key={s} style={styles.statusBadge}>
+              {s === 'hungry' ? 'Голод' : s === 'tired' ? 'Устал' : s}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -126,6 +136,19 @@ const styles: Record<string, React.CSSProperties> = {
     borderTop: '1px solid rgba(255,255,255,0.1)',
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
+  },
+  statusRow: {
+    marginTop: 6,
+    display: 'flex',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  statusBadge: {
+    background: 'rgba(255,255,255,0.1)',
+    borderRadius: 4,
+    padding: '2px 6px',
+    fontSize: 11,
+    color: '#ffcc44',
   },
 }
 

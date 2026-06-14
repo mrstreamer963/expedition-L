@@ -15,6 +15,7 @@ export interface UIColonist {
   sleep: number
   currentJob: string | null
   position: { x: number; y: number }
+  statuses: string[]
 }
 
 export type BuildMode = 'none' | 'wall' | 'bed' | 'food'

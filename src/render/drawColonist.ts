@@ -63,6 +63,19 @@ export function drawColonist(
   ctx.fillStyle = sleepColor
   ctx.fillRect(cx - barW / 2, barY + barH + gap, barW * (colonist.needs.sleep / 100), barH)
 
+  // Status effect icons above name
+  if (colonist.statuses.size > 0) {
+    const statusArr = Array.from(colonist.statuses)
+    const iconY = barY - 14
+    for (let i = 0; i < statusArr.length; i++) {
+      const ix = cx - ((statusArr.length - 1) * 5) + i * 10
+      ctx.beginPath()
+      ctx.arc(ix, iconY, 3, 0, Math.PI * 2)
+      ctx.fillStyle = statusArr[i] === 'hungry' ? '#e06060' : '#60a0e0'
+      ctx.fill()
+    }
+  }
+
   // Name label
   ctx.fillStyle = 'rgba(255,255,255,0.9)'
   ctx.font = '9px system-ui, sans-serif'
