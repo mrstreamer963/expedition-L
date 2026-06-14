@@ -63,33 +63,49 @@ export class Colonist {
       if (remaining >= dist) {
         remaining -= dist
 
-        const curTx = Math.round(this.position.x)
-        const curTy = Math.round(this.position.y)
-        if (map.getOccupant(curTx, curTy) === this.id) {
-          map.setOccupant(curTx, curTy, null)
-        }
-
-        const occupant = map.getOccupant(Math.round(next.x), Math.round(next.y))
+        const nextRx = Math.round(next.x)
+        const nextRy = Math.round(next.y)
+        const occupant = map.getOccupant(nextRx, nextRy)
         if (occupant !== null && occupant !== this.id) {
           this.state = { phase: 'idle' }
           this.reclaimCurrentTile(map)
           return
+        }
+
+        const curRx = Math.round(this.position.x)
+        const curRy = Math.round(this.position.y)
+        if (map.getOccupant(curRx, curRy) === this.id) {
+          map.setOccupant(curRx, curRy, null)
         }
 
         this.position = { x: next.x, y: next.y }
-        map.setOccupant(Math.round(this.position.x), Math.round(this.position.y), this.id)
+        map.setOccupant(nextRx, nextRy, this.id)
         s.path.shift()
       } else {
-        const occupant = map.getOccupant(Math.round(next.x), Math.round(next.y))
+        const nextRx = Math.round(next.x)
+        const nextRy = Math.round(next.y)
+        const occupant = map.getOccupant(nextRx, nextRy)
         if (occupant !== null && occupant !== this.id) {
           this.state = { phase: 'idle' }
           this.reclaimCurrentTile(map)
           return
         }
+        const oldRx = Math.round(this.position.x)
+        const oldRy = Math.round(this.position.y)
         const t = remaining / dist
         this.position = {
           x: this.position.x + dx * t,
           y: this.position.y + dy * t,
+        }
+        const newRx = Math.round(this.position.x)
+        const newRy = Math.round(this.position.y)
+        if (newRx !== oldRx || newRy !== oldRy) {
+          if (map.getOccupant(oldRx, oldRy) === this.id) {
+            map.setOccupant(oldRx, oldRy, null)
+          }
+        }
+        if (map.getOccupant(newRx, newRy) === null) {
+          map.setOccupant(newRx, newRy, this.id)
         }
         remaining = 0
       }
@@ -108,47 +124,39 @@ export class Colonist {
     }
   }
 
-  private clearOccupant(map: GameMap, x: number, y: number): void {
-    if (map.getOccupant(x, y) === this.id) {
-      map.setOccupant(x, y, null)
-    }
+  private reclaimCurrentTile(map: GameMap): void {
+    this.occupyNearestFree(map, Math.round(this.position.x), Math.round(this.position.y))
   }
 
-  private reclaimCurrentTile(map: GameMap): void {
-    const rx = Math.round(this.position.x)
-    const ry = Math.round(this.position.y)
-    const occ = map.getOccupant(rx, ry)
-    if (occ === null || occ === this.id) {
-      this.position = { x: rx, y: ry }
-      if (occ === null) map.setOccupant(rx, ry, this.id)
-      return
-    }
-    const fx = Math.floor(this.position.x)
-    const fy = Math.floor(this.position.y)
-    if ((fx !== rx || fy !== ry) && map.getOccupant(fx, fy) === null) {
-      this.clearOccupant(map, rx, ry)
-      this.position = { x: fx, y: fy }
-      map.setOccupant(fx, fy, this.id)
-      return
-    }
-    const cx = Math.ceil(this.position.x)
-    const cy = Math.ceil(this.position.y)
-    if ((cx !== rx || cy !== ry) && (cx !== fx || cy !== fy) && map.getOccupant(cx, cy) === null) {
-      this.clearOccupant(map, rx, ry)
-      this.position = { x: cx, y: cy }
-      map.setOccupant(cx, cy, this.id)
-      return
+  private occupyNearestFree(map: GameMap, prefX: number, prefY: number): void {
+    map.clearOccupantFor(this.id)
+    const candidates = [
+      { x: prefX, y: prefY },
+      { x: Math.floor(this.position.x), y: Math.floor(this.position.y) },
+      { x: Math.ceil(this.position.x), y: Math.ceil(this.position.y) },
+    ]
+    const seen = new Set<string>()
+    for (const c of candidates) {
+      const k = `${c.x},${c.y}`
+      if (seen.has(k)) continue
+      seen.add(k)
+      if (c.x < 0 || c.x >= map.width || c.y < 0 || c.y >= map.height) continue
+      const occ = map.getOccupant(c.x, c.y)
+      if (occ === null || occ === this.id) {
+        this.position = { x: c.x, y: c.y }
+        map.setOccupant(c.x, c.y, this.id)
+        return
+      }
     }
     for (let radius = 1; radius <= 3; radius++) {
       for (let dx = -radius; dx <= radius; dx++) {
         for (let dy = -radius; dy <= radius; dy++) {
           if (dx === 0 && dy === 0) continue
           if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue
-          const sx = rx + dx
-          const sy = ry + dy
+          const sx = prefX + dx
+          const sy = prefY + dy
           if (sx < 0 || sx >= map.width || sy < 0 || sy >= map.height) continue
           if (map.getOccupant(sx, sy) === null && map.isWalkable(sx, sy)) {
-            this.clearOccupant(map, rx, ry)
             this.position = { x: sx, y: sy }
             map.setOccupant(sx, sy, this.id)
             return

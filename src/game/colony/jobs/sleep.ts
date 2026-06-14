@@ -13,7 +13,7 @@ export const sleepJob: JobDefinition = {
   findAllTargets(colonist: ColonistLike, context: JobContext): { x: number; y: number }[] {
     const occupied = new Set(
       context.colonists
-        .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
+        .filter(c => c.id !== colonist.id && c.state.phase === 'working' && c.state.job === 'sleep')
         .map(c => `${Math.round(c.position.x)},${Math.round(c.position.y)}`)
     )
     const beds = context.beds

@@ -211,9 +211,8 @@ export class GameWorld {
   occupyTile(x: number, y: number, id: string): void {
     const tx = Math.round(x)
     const ty = Math.round(y)
-    if (this.map.getOccupant(tx, ty) === null) {
-      this.map.setOccupant(tx, ty, id)
-    }
+    this.map.clearOccupantFor(id)
+    this.map.setOccupant(tx, ty, id)
   }
 
   releaseTile(x: number, y: number, id: string): void {
@@ -222,6 +221,20 @@ export class GameWorld {
     if (this.map.getOccupant(tx, ty) === id) {
       this.map.setOccupant(tx, ty, null)
     }
+  }
+
+  private findFreeNeighbor(x: number, y: number): { x: number; y: number } {
+    const dirs = [[0,-1],[1,0],[0,1],[-1,0],[1,-1],[-1,1],[1,1],[-1,-1]]
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx
+      const ny = y + dy
+      if (nx >= 0 && nx < this.map.width && ny >= 0 && ny < this.map.height) {
+        if (this.map.isWalkable(nx, ny) && this.map.getOccupant(nx, ny) === null) {
+          return { x: nx, y: ny }
+        }
+      }
+    }
+    return { x, y }
   }
 
   private getJobContext(): JobContext {
@@ -250,7 +263,17 @@ export class GameWorld {
           def.onComplete(colonist, context)
         }
         colonist.transition({ phase: 'idle' })
-        this.occupyTile(colonist.position.x, colonist.position.y, colonist.id)
+        if (job === 'sleep') {
+          this.releaseTile(colonist.position.x, colonist.position.y, colonist.id)
+          const free = this.findFreeNeighbor(
+            Math.round(colonist.position.x),
+            Math.round(colonist.position.y),
+          )
+          colonist.position = free
+          this.occupyTile(free.x, free.y, colonist.id)
+        } else {
+          this.occupyTile(colonist.position.x, colonist.position.y, colonist.id)
+        }
         eventBus.emit('colonist_idle', { colonistId: colonist.id })
       } else if (sAfter.phase === 'idle' && s.phase === 'moving') {
         this.jobDispatcher.cancelReservation(colonist, context)

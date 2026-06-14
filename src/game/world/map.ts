@@ -70,6 +70,16 @@ export class GameMap {
     return this.grid[y][x].occupantId
   }
 
+  clearOccupantFor(id: string): void {
+    for (let y = 0; y < MAP_HEIGHT; y++) {
+      for (let x = 0; x < MAP_WIDTH; x++) {
+        if (this.grid[y][x].occupantId === id) {
+          this.grid[y][x].occupantId = null
+        }
+      }
+    }
+  }
+
   // Get the full grid (for iteration during rendering)
   getGrid(): Tile[][] {
     return this.grid
