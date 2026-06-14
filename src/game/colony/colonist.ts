@@ -1,5 +1,6 @@
 import { GameMap } from '../world/map'
 import { Vec2, ColonistNeeds, ColonistState } from './types'
+import { JOB_REGISTRY } from './jobRegistry'
 
 export type { Vec2, ColonistNeeds, ColonistState }
 
@@ -101,7 +102,8 @@ export class Colonist {
         this.reclaimCurrentTile(map)
         return
       }
-      this.state = { phase: 'working', job: s.job, progress: 0, duration: 0 }
+      const def = JOB_REGISTRY.get(s.job)
+      this.state = { phase: 'working', job: s.job, progress: 0, duration: def?.duration ?? 0.5 }
     }
   }
 

@@ -1,6 +1,7 @@
 import { JobDefinition, JobContext, ColonistLike } from '../types'
 import { Building } from '../../entities/building'
 import { TileType } from '../../world/tile'
+import { eventBus } from '../../eventBus'
 
 interface ColonistWithBuildTask extends ColonistLike {
   reservedBuildTaskId: string | null
@@ -42,8 +43,10 @@ export const buildJob: JobDefinition = {
       case 'food':
         foods.push({ id: task.id, x: tx, y: ty })
         map.setTile(tx, ty, TileType.Food)
+        eventBus.emit('food_built', { position: { x: tx, y: ty } })
         break
     }
+    ;(colonist as ColonistWithBuildTask).reservedBuildTaskId = null
   },
 
   onCancel(colonist: ColonistLike, context: JobContext): void {

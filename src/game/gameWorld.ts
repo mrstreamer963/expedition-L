@@ -64,6 +64,19 @@ export class GameWorld {
     }
     eventBus.on('build_queued', buildHandler)
     this.cleanupFns.push(() => eventBus.off('build_queued', buildHandler))
+
+    const foodConsumedHandler = (data: { position: Vec2 }) => {
+      this.jobDispatcher.onEvent({ type: 'food_consumed', position: data.position }, this.getJobContext())
+    }
+    eventBus.on('food_consumed', foodConsumedHandler)
+    this.cleanupFns.push(() => eventBus.off('food_consumed', foodConsumedHandler))
+
+    const foodBuiltHandler = (data: { position: Vec2 }) => {
+      this.jobDispatcher.onEvent({ type: 'food_built', position: data.position }, this.getJobContext())
+    }
+    eventBus.on('food_built', foodBuiltHandler)
+    this.cleanupFns.push(() => eventBus.off('food_built', foodBuiltHandler))
+
     this.buildQueue = new BuildQueue()
 
     if (savedState) {
@@ -121,6 +134,8 @@ export class GameWorld {
 
 
 
+  private buildTaskCounter = 0
+
   addBuildTask(tileX: number, tileY: number): void {
     if (!this.canBuildAt(tileX, tileY)) {
       this.emitUiState()
@@ -128,7 +143,7 @@ export class GameWorld {
     }
 
     const task: BuildTask = {
-      id: `build-${Date.now()}`,
+      id: `build-${Date.now()}-${++this.buildTaskCounter}`,
       type: this.buildMode as 'wall' | 'bed' | 'food',
       x: tileX,
       y: tileY,
@@ -231,6 +246,7 @@ export class GameWorld {
         this.occupyTile(colonist.position.x, colonist.position.y, colonist.id)
         eventBus.emit('colonist_idle', { colonistId: colonist.id })
       } else if (sAfter.phase === 'idle' && s.phase === 'moving') {
+        this.jobDispatcher.cancelReservation(colonist, context)
         eventBus.emit('colonist_idle', { colonistId: colonist.id })
       }
     }

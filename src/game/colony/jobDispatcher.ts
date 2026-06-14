@@ -24,7 +24,7 @@ export class JobDispatcher {
     task: { id: string; type: string; x: number; y: number; reservedBy: string | null },
     context: JobContext
   ): void {
-    const idle = this.findIdleColonist(context)
+    const idle = this.findIdleColonist(context, task.x, task.y)
     if (!idle) return
     task.reservedBy = idle.id
     idle.reservedBuildTaskId = task.id
@@ -83,16 +83,37 @@ export class JobDispatcher {
   }
 
   private tryAssignBuild(colonist: ColonistLike, context: JobContext): boolean {
-    const task = context.buildQueue.all.find(t => t.reservedBy === null)
+    const existing = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
+    if (existing) {
+      ;(colonist as Colonist).reservedBuildTaskId = existing.id
+      return this.sendTo(colonist, { x: existing.x, y: existing.y }, 'build', context)
+    }
+    const tasks = context.buildQueue.all
+      .filter(t => t.reservedBy === null)
+      .sort((a, b) => {
+        const da = Math.abs(a.x - colonist.position.x) + Math.abs(a.y - colonist.position.y)
+        const db = Math.abs(b.x - colonist.position.x) + Math.abs(b.y - colonist.position.y)
+        return da - db
+      })
+    const task = tasks[0]
     if (!task) return false
     task.reservedBy = colonist.id
     ;(colonist as Colonist).reservedBuildTaskId = task.id
     return this.sendTo(colonist, { x: task.x, y: task.y }, 'build', context)
   }
 
-  private findIdleColonist(context: JobContext): Colonist | null {
-    const idle = context.colonists.filter(c => c.state.phase === 'idle')
-    return idle.length > 0 ? (idle[0] as Colonist) : null
+  private findIdleColonist(context: JobContext, x: number, y: number): Colonist | null {
+    let nearest: Colonist | null = null
+    let minDist = Infinity
+    for (const c of context.colonists) {
+      if (c.state.phase !== 'idle') continue
+      const dist = Math.abs(c.position.x - x) + Math.abs(c.position.y - y)
+      if (dist < minDist) {
+        minDist = dist
+        nearest = c as Colonist
+      }
+    }
+    return nearest
   }
 
   private sendTo(
@@ -140,7 +161,7 @@ export class JobDispatcher {
     return true
   }
 
-  private cancelReservation(colonist: ColonistLike, context: JobContext): void {
+  cancelReservation(colonist: ColonistLike, context: JobContext): void {
     const task = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
     if (task) task.reservedBy = null
     ;(colonist as Colonist).reservedBuildTaskId = null

@@ -1,4 +1,5 @@
 import { JobDefinition, JobContext, ColonistLike } from '../types'
+import { eventBus } from '../../eventBus'
 
 export const eatJob: JobDefinition = {
   type: 'eat',
@@ -36,8 +37,10 @@ export const eatJob: JobDefinition = {
       Math.round(f.y) === Math.round(colonist.position.y)
     )
     if (idx !== -1) {
+      const food = foods[idx]
       foods.splice(idx, 1)
       colonist.needs.hunger = Math.min(100, colonist.needs.hunger + 40)
+      eventBus.emit('food_consumed', { position: { x: food.x, y: food.y } })
     }
   },
 
