@@ -129,7 +129,6 @@ export class Colonist {
   }
 
   private occupyNearestFree(map: GameMap, prefX: number, prefY: number): void {
-    map.clearOccupantFor(this.id)
     const candidates = [
       { x: prefX, y: prefY },
       { x: Math.floor(this.position.x), y: Math.floor(this.position.y) },
@@ -143,6 +142,7 @@ export class Colonist {
       if (c.x < 0 || c.x >= map.width || c.y < 0 || c.y >= map.height) continue
       const occ = map.getOccupant(c.x, c.y)
       if (occ === null || occ === this.id) {
+        map.clearOccupantFor(this.id)
         this.position = { x: c.x, y: c.y }
         map.setOccupant(c.x, c.y, this.id)
         return
@@ -157,6 +157,7 @@ export class Colonist {
           const sy = prefY + dy
           if (sx < 0 || sx >= map.width || sy < 0 || sy >= map.height) continue
           if (map.getOccupant(sx, sy) === null && map.isWalkable(sx, sy)) {
+            map.clearOccupantFor(this.id)
             this.position = { x: sx, y: sy }
             map.setOccupant(sx, sy, this.id)
             return

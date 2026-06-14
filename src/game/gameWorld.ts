@@ -211,8 +211,11 @@ export class GameWorld {
   occupyTile(x: number, y: number, id: string): void {
     const tx = Math.round(x)
     const ty = Math.round(y)
-    this.map.clearOccupantFor(id)
-    this.map.setOccupant(tx, ty, id)
+    const occ = this.map.getOccupant(tx, ty)
+    if (occ === null || occ === id) {
+      this.map.clearOccupantFor(id)
+      this.map.setOccupant(tx, ty, id)
+    }
   }
 
   releaseTile(x: number, y: number, id: string): void {
