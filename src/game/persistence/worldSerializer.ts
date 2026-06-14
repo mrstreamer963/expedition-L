@@ -1,23 +1,55 @@
 import { GameMap } from '../world/map'
-import { TileType } from '../world/tile'
+import { TileType, Tile } from '../world/tile'
 import { Colonist } from '../colony/colonist'
+import { ColonistState } from '../colony/types'
 import { Camera } from '../camera'
 import { Food } from '../entities/food'
 import { Bed } from '../entities/bed'
 import { Building, BuildingType, BuildQueue, BuildTask } from '../entities/building'
 import { GameSpeed } from '../../store/types'
 
+export interface SerializableTile {
+  type: TileType
+  occupantId: string | null
+}
+
+export interface SerializableColonist {
+  id: string
+  name: string
+  color: string
+  position: { x: number; y: number }
+  fsmState: ColonistState
+  needs: { hunger: number; sleep: number }
+}
+
+export interface SerializableFood {
+  id: string
+  x: number
+  y: number
+}
+
+export interface SerializableBed {
+  id: string
+  x: number
+  y: number
+}
+
+export interface SerializableBuilding {
+  id: string
+  type: BuildingType
+  x: number
+  y: number
+}
+
 export interface SaveData {
   version: number
   timestamp: number
   gameName: string
-  map: {
-    tiles: { type: TileType; occupantId: string | null }[][]
-  }
-  colonists: any[]
-  foods: { id: string; x: number; y: number }[]
-  beds: { id: string; x: number; y: number }[]
-  buildings: { id: string; type: BuildingType; x: number; y: number }[]
+  map: { tiles: SerializableTile[][] }
+  colonists: SerializableColonist[]
+  foods: SerializableFood[]
+  beds: SerializableBed[]
+  buildings: SerializableBuilding[]
   buildQueue: { tasks: BuildTask[] }
   camera: { offsetX: number; offsetY: number }
   speed: GameSpeed
@@ -35,13 +67,13 @@ export interface GameWorldInit {
 }
 
 export interface SerializableWorld {
-  map: GameMap
-  colonists: Colonist[]
-  foods: Food[]
-  beds: Bed[]
-  buildings: Building[]
-  buildQueue: BuildQueue
-  camera: Camera
+  map: { toJSON(): { tiles: SerializableTile[][] }; tileAt(x: number, y: number): Tile }
+  colonists: { toJSON(): SerializableColonist }[]
+  foods: { toJSON(): SerializableFood }[]
+  beds: { toJSON(): SerializableBed }[]
+  buildings: { toJSON(): SerializableBuilding }[]
+  buildQueue: { toJSON(): { tasks: BuildTask[] }; all: BuildTask[] }
+  camera: { toJSON(): { offsetX: number; offsetY: number } }
   speed: GameSpeed
 }
 

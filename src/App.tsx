@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import GameCanvas from './ui/GameCanvas'
-import TopBar from './ui/TopBar'
-import BuildMenu from './ui/BuildMenu'
-import ColonistPanel from './ui/ColonistPanel'
-import { GameController } from './controller/gameController'
-import { UIState, INITIAL_UI_STATE, BuildMode } from './ui/types'
-import { SaveData, WorldSerializer } from './game/persistence/worldSerializer'
-import { loadFromLocalStorage, downloadSaveFile, uploadSaveFile, saveToLocalStorage, AUTOSAVE_KEY } from './game/persistence/storage'
+import { GameCanvas, TopBar, BuildMenu, ColonistPanel, UIState, INITIAL_UI_STATE, BuildMode } from './ui'
+import { GameController } from './controller'
+import { SaveData, WorldSerializer } from './game/persistence'
+import { loadFromLocalStorage, downloadSaveFile, uploadSaveFile, saveToLocalStorage, AUTOSAVE_KEY } from './game/persistence'
 
 function App() {
   const [uiState, setUiState] = useState<UIState>(INITIAL_UI_STATE)
