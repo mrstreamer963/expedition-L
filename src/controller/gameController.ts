@@ -9,20 +9,18 @@ import { GameSpeed } from '../store/types'
 import { SaveData, WorldSerializer } from '../game/persistence/worldSerializer'
 import { saveToLocalStorage, AUTOSAVE_KEY } from '../game/persistence/storage'
 import { findPath } from '../game/world/pathfinding'
-import { Colonist } from '../game/colony/colonist'
 
 export class GameController {
   world: GameWorld
   private gameLoop: GameLoop
   private inputHandler: InputHandler
-  private canvas: HTMLCanvasElement
   private width: number
   private height: number
+  private autoSaveCleanup: (() => void) | null = null
 
   onUiUpdate: ((state: UIState) => void) | null = null
 
   constructor(canvas: HTMLCanvasElement, savedState?: SaveData) {
-    this.canvas = canvas
     this.width = canvas.width
     this.height = canvas.height
 
@@ -52,6 +50,7 @@ export class GameController {
       saveToLocalStorage(AUTOSAVE_KEY, data)
     }
     window.addEventListener('beforeunload', autoSaveHandler)
+    this.autoSaveCleanup = () => window.removeEventListener('beforeunload', autoSaveHandler)
   }
 
   private setupInputCallbacks(): void {
@@ -154,6 +153,7 @@ export class GameController {
   }
 
   destroy(): void {
+    this.autoSaveCleanup?.()
     this.gameLoop.destroy()
     this.world.destroy()
   }
