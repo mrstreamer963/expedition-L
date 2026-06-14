@@ -3,23 +3,23 @@ import GameCanvas from './ui/GameCanvas'
 import TopBar from './ui/TopBar'
 import BuildMenu from './ui/BuildMenu'
 import ColonistPanel from './ui/ColonistPanel'
-import { GameWorld } from './game/gameWorld'
+import { GameController } from './controller/gameController'
 import { UIState, INITIAL_UI_STATE, BuildMode } from './ui/types'
 import { SaveData, WorldSerializer } from './game/persistence/worldSerializer'
 import { loadFromLocalStorage, downloadSaveFile, uploadSaveFile, saveToLocalStorage, AUTOSAVE_KEY } from './game/persistence/storage'
 
 function App() {
   const [uiState, setUiState] = useState<UIState>(INITIAL_UI_STATE)
-  const gameRef = useRef<GameWorld | null>(null)
+  const controllerRef = useRef<GameController | null>(null)
 
   const startNewGame = useCallback((canvas: HTMLCanvasElement, savedState?: SaveData) => {
-    if (gameRef.current) {
-      gameRef.current.destroy()
+    if (controllerRef.current) {
+      controllerRef.current.destroy()
     }
-    const game = new GameWorld(canvas, savedState)
-    game.onUiUpdate = (state) => setUiState({ ...state })
-    gameRef.current = game
-    ;(window as any).__game = game
+    const controller = new GameController(canvas, savedState)
+    controller.onUiUpdate = (state) => setUiState({ ...state })
+    controllerRef.current = controller
+    ;(window as any).__game = controller
   }, [])
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
@@ -28,25 +28,25 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (gameRef.current) {
-        gameRef.current.destroy()
-        gameRef.current = null
+      if (controllerRef.current) {
+        controllerRef.current.destroy()
+        controllerRef.current = null
       }
     }
   }, [])
 
   const handleSetSpeed = useCallback((speed: 0 | 1 | 2 | 3) => {
-    gameRef.current?.setSpeed(speed)
+    controllerRef.current?.setSpeed(speed)
   }, [])
 
   const handleSelectBuildMode = useCallback((mode: BuildMode) => {
-    gameRef.current?.setBuildMode(mode)
+    controllerRef.current?.setBuildMode(mode)
   }, [])
 
   const handleSave = useCallback(() => {
-    const world = gameRef.current
-    if (!world) return
-    const data = WorldSerializer.toJSON(world)
+    const ctrl = controllerRef.current
+    if (!ctrl) return
+    const data = WorldSerializer.toJSON(ctrl.world)
     saveToLocalStorage(AUTOSAVE_KEY, data)
     downloadSaveFile(data)
   }, [])

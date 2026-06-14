@@ -1,29 +1,14 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { GameWorld } from '../game/gameWorld'
+import { Camera } from '../game/camera'
 import * as pathfinding from '../game/world/pathfinding'
 
 describe('GameWorld speed controls', () => {
-  let canvas: HTMLCanvasElement
   let game: GameWorld
 
   beforeEach(() => {
-    canvas = document.createElement('canvas')
-    canvas.width = 960
-    canvas.height = 540
-    vi.spyOn(canvas, 'getContext').mockReturnValue({
-      canvas,
-      clearRect: vi.fn(),
-      fillRect: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      closePath: vi.fn(),
-      fill: vi.fn(),
-      stroke: vi.fn(),
-      arc: vi.fn(),
-      quadraticCurveTo: vi.fn(),
-    } as unknown as CanvasRenderingContext2D)
-    game = new GameWorld(canvas)
+    const camera = new Camera(480, 270)
+    game = new GameWorld(camera)
   })
 
   afterEach(() => {
@@ -73,27 +58,11 @@ describe('GameWorld speed controls', () => {
 })
 
 describe('JobDispatcher need prioritization', () => {
-  let canvas: HTMLCanvasElement
   let game: GameWorld
 
   beforeEach(() => {
-    canvas = document.createElement('canvas')
-    canvas.width = 960
-    canvas.height = 540
-    vi.spyOn(canvas, 'getContext').mockReturnValue({
-      canvas,
-      clearRect: vi.fn(),
-      fillRect: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      closePath: vi.fn(),
-      fill: vi.fn(),
-      stroke: vi.fn(),
-      arc: vi.fn(),
-      quadraticCurveTo: vi.fn(),
-    } as unknown as CanvasRenderingContext2D)
-    game = new GameWorld(canvas)
+    const camera = new Camera(480, 270)
+    game = new GameWorld(camera)
   })
 
   afterEach(() => {
@@ -193,27 +162,11 @@ describe('JobDispatcher need prioritization', () => {
 })
 
 describe('Colonist occupancy collision prevention', () => {
-  let canvas: HTMLCanvasElement
   let game: GameWorld
 
   beforeEach(() => {
-    canvas = document.createElement('canvas')
-    canvas.width = 960
-    canvas.height = 540
-    vi.spyOn(canvas, 'getContext').mockReturnValue({
-      canvas,
-      clearRect: vi.fn(),
-      fillRect: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      closePath: vi.fn(),
-      fill: vi.fn(),
-      stroke: vi.fn(),
-      arc: vi.fn(),
-      quadraticCurveTo: vi.fn(),
-    } as unknown as CanvasRenderingContext2D)
-    game = new GameWorld(canvas)
+    const camera = new Camera(480, 270)
+    game = new GameWorld(camera)
   })
 
   afterEach(() => {

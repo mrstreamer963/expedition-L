@@ -3,10 +3,6 @@ import { TileType } from './world/tile'
 import { Colonist, Vec2 } from './colony/colonist'
 import { createInitialColonists } from './colony/colonistFactory'
 import { Camera } from './camera'
-import { GameLoop } from './gameLoop'
-import { InputHandler } from './input/inputHandler'
-import { findPath } from './world/pathfinding'
-import { renderWorld } from '../render/worldRenderer'
 import { UIState, BuildMode } from '../ui/types'
 import { GameSpeed } from '../store/types'
 import { JobDispatcher } from './colony/jobDispatcher'
@@ -22,15 +18,11 @@ import { Bed } from './entities/bed'
 import { Building, BuildQueue, BuildTask } from './entities/building'
 import { NeedSystem } from './systems/needSystem'
 import { WorldSerializer, SaveData } from './persistence/worldSerializer'
-import { saveToLocalStorage, AUTOSAVE_KEY } from './persistence/storage'
-import { RenderSnapshot, collectSnapshot } from '../render/snapshot'
 
 export class GameWorld {
   map: GameMap
   colonists: Colonist[]
   camera: Camera
-  gameLoop: GameLoop
-  inputHandler: InputHandler
   jobDispatcher: JobDispatcher
   buildQueue: BuildQueue
 
@@ -38,11 +30,9 @@ export class GameWorld {
   beds: Bed[]
   buildings: Building[]
 
-  canvas: HTMLCanvasElement
-  width: number
-  height: number
   paused: boolean = false
   speed: GameSpeed = 1
+  timeScale: number = 1
 
   selectedColonistId: string | null = null
   buildMode: BuildMode = 'none'
@@ -56,11 +46,7 @@ export class GameWorld {
   private autoSaveHandler: (() => void) | null = null
   private cleanupFns: (() => void)[] = []
 
-  constructor(canvas: HTMLCanvasElement, savedState?: SaveData) {
-    this.canvas = canvas
-    this.width = canvas.width
-    this.height = canvas.height
-
+  constructor(camera: Camera, savedState?: SaveData) {
     JOB_REGISTRY.register(eatJob)
     JOB_REGISTRY.register(sleepJob)
     JOB_REGISTRY.register(buildJob)
@@ -88,8 +74,9 @@ export class GameWorld {
       this.beds = init.beds
       this.buildings = init.buildings
       this.buildQueue = init.buildQueue
-      this.camera = init.camera
+      this.camera = camera
       this.speed = [0, 1, 2, 3].includes(init.speed) ? init.speed : 2
+      this.timeScale = this.speed === 2 ? 5 : this.speed === 3 ? 10 : this.speed
       this.paused = this.speed === 0
       for (let y = 0; y < this.map.height; y++) {
         for (let x = 0; x < this.map.width; x++) {
@@ -105,30 +92,11 @@ export class GameWorld {
       for (const c of this.colonists) {
         this.occupyTile(c.position.x, c.position.y, c.id)
       }
-      this.camera = new Camera(this.width / 2, 100)
+      this.camera = camera
       this.foods = this.placeInitialFood()
       this.beds = this.placeInitialBeds()
       this.buildings = []
     }
-
-    this.inputHandler = new InputHandler(this.camera, this.map, canvas)
-    this.setupInputCallbacks()
-
-    const initialSpeed = this.speed === 2 ? 5 : this.speed === 3 ? 10 : this.speed
-    this.gameLoop = new GameLoop({
-      canvas,
-      onUpdate: (dt) => this.update(dt),
-      onRender: (ctx, realDt) => this.render(ctx, realDt),
-    })
-    this.gameLoop.setSpeed(initialSpeed)
-    this.gameLoop.start()
-    this.emitUiState()
-
-    this.autoSaveHandler = () => {
-      const data = WorldSerializer.toJSON(this)
-      saveToLocalStorage(AUTOSAVE_KEY, data)
-    }
-    window.addEventListener('beforeunload', this.autoSaveHandler)
   }
 
   private placeInitialFood(): Food[] {
@@ -151,69 +119,9 @@ export class GameWorld {
     })
   }
 
-  private setupInputCallbacks(): void {
-    this.inputHandler.onTileClick = (tileX, tileY) => {
-      if (this.buildMode !== 'none') {
-        this.addBuildTask(tileX, tileY)
-        return
-      }
-      const colonist = this.colonists.find(c =>
-        Math.round(c.position.x) === tileX && Math.round(c.position.y) === tileY
-      )
-      this.selectedColonistId = colonist ? colonist.id : null
-      this.emitUiState()
-    }
 
-    this.inputHandler.onRightClick = (tileX, tileY) => {
-      const target = { x: tileX, y: tileY }
-      const colonist = this.getNearestColonist(target)
-      if (colonist && this.map.isWalkable(tileX, tileY)) {
-        if (colonist.state.phase !== 'idle') {
-          colonist.transition({ phase: 'idle' })
-        }
-        this.releaseTile(colonist.position.x, colonist.position.y, colonist.id)
-        const occupied = this.colonists
-          .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
-          .map(c => ({ x: Math.round(c.position.x), y: Math.round(c.position.y) }))
-        const path = findPath(this.map, colonist.position, target, occupied)
-        if (path.length > 0) {
-          colonist.transition({ phase: 'moving', job: 'walk', path })
-        }
-      }
-    }
 
-    this.inputHandler.onTileHover = (tileX, tileY) => {
-      if (tileX >= 0 && tileX < this.map.width && tileY >= 0 && tileY < this.map.height) {
-        this.hoveredTile = { x: tileX, y: tileY }
-      } else {
-        this.hoveredTile = null
-      }
-    }
-
-    this.inputHandler.onKey = (key) => {
-      switch (key) {
-        case ' ':
-        case 'p':
-        case 'P':
-          this.togglePause()
-          break
-        case '1':
-          this.setSpeed(0)
-          break
-        case '2':
-          this.setSpeed(1)
-          break
-        case '3':
-          this.setSpeed(2)
-          break
-        case '4':
-          this.setSpeed(3)
-          break
-      }
-    }
-  }
-
-  private addBuildTask(tileX: number, tileY: number): void {
+  addBuildTask(tileX: number, tileY: number): void {
     if (!this.canBuildAt(tileX, tileY)) {
       this.emitUiState()
       return
@@ -240,7 +148,7 @@ export class GameWorld {
     return true
   }
 
-  private getNearestColonist(target: Vec2): Colonist | null {
+  getNearestColonist(target: Vec2): Colonist | null {
     let nearest: Colonist | null = null
     let minDist = Infinity
     for (const c of this.colonists) {
@@ -257,11 +165,11 @@ export class GameWorld {
     if (this.paused) {
       this.speed = 1
       this.paused = false
-      this.gameLoop.setSpeed(1)
+      this.timeScale = 1
     } else {
       this.speed = 0
       this.paused = true
-      this.gameLoop.setSpeed(0)
+      this.timeScale = 0
     }
     this.emitUiState()
   }
@@ -269,8 +177,7 @@ export class GameWorld {
   setSpeed(speed: GameSpeed): void {
     this.speed = speed
     this.paused = speed === 0
-    const timeScale = speed === 2 ? 5 : speed === 3 ? 10 : speed
-    this.gameLoop.setSpeed(timeScale)
+    this.timeScale = speed === 2 ? 5 : speed === 3 ? 10 : speed
     this.emitUiState()
   }
 
@@ -279,7 +186,7 @@ export class GameWorld {
     this.emitUiState()
   }
 
-  private occupyTile(x: number, y: number, id: string): void {
+  occupyTile(x: number, y: number, id: string): void {
     const tx = Math.round(x)
     const ty = Math.round(y)
     if (this.map.getOccupant(tx, ty) === null) {
@@ -287,7 +194,7 @@ export class GameWorld {
     }
   }
 
-  private releaseTile(x: number, y: number, id: string): void {
+  releaseTile(x: number, y: number, id: string): void {
     const tx = Math.round(x)
     const ty = Math.round(y)
     if (this.map.getOccupant(tx, ty) === id) {
@@ -306,7 +213,7 @@ export class GameWorld {
     }
   }
 
-  private update(dt: number): void {
+  update(dt: number): void {
     const context = this.getJobContext()
 
     for (const colonist of this.colonists) {
@@ -343,33 +250,11 @@ export class GameWorld {
     }
   }
 
-  private render(ctx: CanvasRenderingContext2D, realDt: number = 0): void {
-    this.inputHandler.update(realDt)
-    renderWorld(ctx, this.collectSnapshot())
-  }
-
-  private collectSnapshot(): RenderSnapshot {
-    return collectSnapshot({
-      camera: this.camera,
-      canvasWidth: this.width,
-      canvasHeight: this.height,
-      map: this.map,
-      colonists: this.colonists,
-      foods: this.foods,
-      beds: this.beds,
-      buildings: this.buildings,
-      buildQueue: this.buildQueue,
-      hoveredTile: this.hoveredTile,
-      selectedColonistId: this.selectedColonistId,
-      buildMode: this.buildMode,
-    })
-  }
-
-  private emitUiState(): void {
+  emitUiState(): void {
     if (!this.onUiUpdate) return
 
     const state: UIState = {
-      timeScale: this.gameLoop.getSpeed(),
+      timeScale: this.timeScale,
       speed: this.speed,
       foodCount: this.foods.length,
       colonistCount: this.colonists.length,
@@ -393,7 +278,6 @@ export class GameWorld {
   destroy(): void {
     this.cleanupFns.forEach(fn => fn())
     this.cleanupFns = []
-    this.gameLoop.destroy()
     if (this.autoSaveHandler) {
       window.removeEventListener('beforeunload', this.autoSaveHandler)
       this.autoSaveHandler = null
