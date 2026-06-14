@@ -108,4 +108,14 @@ describe('WorldSerializer', () => {
     const restored = WorldSerializer.fromJSON(data)
     expect(restored.speed).toBe(2)
   })
+
+  it('round-trip preserves colonist statuses', () => {
+    const world = createTestWorld()
+    ;(world.colonists[0] as Colonist).statuses.add('hungry')
+    ;(world.colonists[1] as Colonist).statuses.add('tired')
+    const data = WorldSerializer.toJSON(world)
+    const restored = WorldSerializer.fromJSON(data)
+    expect(restored.colonists[0].statuses.has('hungry')).toBe(true)
+    expect(restored.colonists[1].statuses.has('tired')).toBe(true)
+  })
 })

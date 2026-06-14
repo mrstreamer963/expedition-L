@@ -20,6 +20,7 @@ export interface SerializableColonist {
   position: { x: number; y: number }
   fsmState: ColonistState
   needs: { hunger: number; sleep: number }
+  statuses: string[]
 }
 
 export interface SerializableFood {
