@@ -226,18 +226,21 @@ export class GameWorld {
     }
   }
 
-  private findFreeNeighbor(x: number, y: number): { x: number; y: number } {
-    const dirs = [[0,-1],[1,0],[0,1],[-1,0],[1,-1],[-1,1],[1,1],[-1,-1]]
-    for (const [dx, dy] of dirs) {
-      const nx = x + dx
-      const ny = y + dy
-      if (nx >= 0 && nx < this.map.width && ny >= 0 && ny < this.map.height) {
-        if (this.map.isWalkable(nx, ny) && this.map.getOccupant(nx, ny) === null) {
-          return { x: nx, y: ny }
+  private findFreeNeighbor(x: number, y: number, maxRadius: number = 5): { x: number; y: number } | null {
+    for (let r = 1; r <= maxRadius; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dy = -r; dy <= r; dy++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue
+          const nx = x + dx
+          const ny = y + dy
+          if (nx < 0 || nx >= this.map.width || ny < 0 || ny >= this.map.height) continue
+          if (this.map.isWalkable(nx, ny) && this.map.getOccupant(nx, ny) === null) {
+            return { x: nx, y: ny }
+          }
         }
       }
     }
-    return { x, y }
+    return null
   }
 
   private getJobContext(): JobContext {
@@ -272,8 +275,10 @@ export class GameWorld {
             Math.round(colonist.position.x),
             Math.round(colonist.position.y),
           )
-          colonist.position = free
-          this.occupyTile(free.x, free.y, colonist.id)
+          if (free) {
+            colonist.position = free
+            this.occupyTile(free.x, free.y, colonist.id)
+          }
         } else {
           this.occupyTile(colonist.position.x, colonist.position.y, colonist.id)
         }
