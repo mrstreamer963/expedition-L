@@ -6,9 +6,24 @@ export interface Vec2 {
   y: number
 }
 
+export type ColonistStatus = 'hungry' | 'tired'
+
 export interface ColonistNeeds {
   hunger: number
   sleep: number
+}
+
+export interface StatusDefinition {
+  type: ColonistStatus
+  label: string
+  priority: number
+  condition: (colonist: ColonistLike) => boolean
+  jobType: string
+}
+
+export interface StatusUpdatable {
+  needs: ColonistNeeds
+  statuses: Set<ColonistStatus>
 }
 
 export type ColonistState =
@@ -32,6 +47,7 @@ export interface ColonistLike {
   position: Vec2
   needs: ColonistNeeds
   state: ColonistState
+  statuses: Set<ColonistStatus>
 }
 
 export interface JobDefinition<C = JobContext> {

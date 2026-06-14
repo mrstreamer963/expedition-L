@@ -1,5 +1,5 @@
 import { GameMap } from '../world/map'
-import { Vec2, ColonistNeeds, ColonistState } from './types'
+import { Vec2, ColonistNeeds, ColonistState, ColonistStatus } from './types'
 import { JOB_REGISTRY } from './jobRegistry'
 
 export type { Vec2, ColonistNeeds, ColonistState }
@@ -13,6 +13,7 @@ export class Colonist {
   state: ColonistState
   needs: ColonistNeeds
   reservedBuildTaskId: string | null = null
+  statuses: Set<ColonistStatus> = new Set()
 
   constructor(id: string, name: string, color: string, x: number, y: number) {
     this.id = id
