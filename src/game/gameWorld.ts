@@ -10,6 +10,7 @@ import { renderWorld } from '../render/worldRenderer'
 import { UIState, BuildMode } from '../ui/types'
 import { GameSpeed } from '../store/types'
 import { JobDispatcher } from './colony/jobDispatcher'
+import { eventBus } from './eventBus'
 import { JOB_REGISTRY } from './colony/jobRegistry'
 import { eatJob } from './colony/jobs/eat'
 import { sleepJob } from './colony/jobs/sleep'
@@ -63,6 +64,12 @@ export class GameWorld {
     JOB_REGISTRY.register(walkJob)
 
     this.jobDispatcher = new JobDispatcher()
+    eventBus.on('colonist_idle', (data) => {
+      this.jobDispatcher.assignBestJob(data.colonistId, this.getJobContext())
+    })
+    eventBus.on('build_queued', (data) => {
+      this.jobDispatcher.onEvent({ type: 'build_queued', task: data.task }, this.getJobContext())
+    })
     this.buildQueue = new BuildQueue()
 
     if (savedState) {
@@ -212,7 +219,7 @@ export class GameWorld {
       reservedBy: null,
     }
     this.buildQueue.add(task)
-    this.jobDispatcher.onEvent({ type: 'build_queued', task }, this.getJobContext())
+    eventBus.emit('build_queued', { task })
     this.emitUiState()
   }
 
@@ -307,9 +314,9 @@ export class GameWorld {
         }
         colonist.transition({ phase: 'idle' })
         this.occupyTile(colonist.position.x, colonist.position.y, colonist.id)
-        this.jobDispatcher.onEvent({ type: 'colonist_idle', colonistId: colonist.id }, context)
+        eventBus.emit('colonist_idle', { colonistId: colonist.id })
       } else if (sAfter.phase === 'idle' && s.phase === 'moving') {
-        this.jobDispatcher.onEvent({ type: 'colonist_idle', colonistId: colonist.id }, context)
+        eventBus.emit('colonist_idle', { colonistId: colonist.id })
       }
     }
 
