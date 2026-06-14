@@ -11,6 +11,7 @@ export class Colonist {
   speed: number
   state: ColonistState
   needs: ColonistNeeds
+  reservedBuildTaskId: string | null = null
 
   constructor(id: string, name: string, color: string, x: number, y: number) {
     this.id = id
@@ -176,6 +177,7 @@ export class Colonist {
       position: { ...this.position },
       fsmState: this.state,
       needs: { ...this.needs },
+      reservedBuildTaskId: this.reservedBuildTaskId,
     }
   }
 
@@ -190,6 +192,8 @@ export class Colonist {
     } else {
       c.state = { phase: 'idle' }
     }
+
+    c.reservedBuildTaskId = data.reservedBuildTaskId ?? null
 
     return c
   }

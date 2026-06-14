@@ -30,8 +30,7 @@ export const sleepJob: JobDefinition = {
   onStart(_colonist: ColonistLike, _context: JobContext): void {},
 
   onComplete(colonist: ColonistLike, _context: JobContext): void {
-    const c = colonist as any
-    c.needs.sleep = Math.min(100, c.needs.sleep + 60)
+    colonist.needs.sleep = Math.min(100, colonist.needs.sleep + 60)
   },
 
   onCancel(_colonist: ColonistLike, _context: JobContext): void {},

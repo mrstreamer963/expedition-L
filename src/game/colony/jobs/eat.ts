@@ -30,15 +30,14 @@ export const eatJob: JobDefinition = {
   onStart(_colonist: ColonistLike, _context: JobContext): void {},
 
   onComplete(colonist: ColonistLike, context: JobContext): void {
-    const c = colonist as any
-    const foods: any[] = context.foods as any[]
+    const foods = context.foods
     const idx = foods.findIndex(f =>
-      Math.round(f.x) === Math.round(c.position.x) &&
-      Math.round(f.y) === Math.round(c.position.y)
+      Math.round(f.x) === Math.round(colonist.position.x) &&
+      Math.round(f.y) === Math.round(colonist.position.y)
     )
     if (idx !== -1) {
       foods.splice(idx, 1)
-      c.needs.hunger = Math.min(100, c.needs.hunger + 40)
+      colonist.needs.hunger = Math.min(100, colonist.needs.hunger + 40)
     }
   },
 
