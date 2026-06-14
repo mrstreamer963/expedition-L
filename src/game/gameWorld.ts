@@ -20,6 +20,7 @@ import { JobContext } from './colony/types'
 import { Food } from './entities/food'
 import { Bed } from './entities/bed'
 import { Building, BuildQueue, BuildTask } from './entities/building'
+import { NeedSystem } from './systems/needSystem'
 import { WorldSerializer, SaveData } from './persistence/worldSerializer'
 import { saveToLocalStorage, AUTOSAVE_KEY } from './persistence/storage'
 import { RenderSnapshot } from '../render/worldRenderer'
@@ -51,6 +52,7 @@ export class GameWorld {
   private uiUpdateTimer: number = 0
   private readonly UI_UPDATE_INTERVAL = 0.5
 
+  private needSystem = new NeedSystem()
   private autoSaveHandler: (() => void) | null = null
   private cleanupFns: (() => void)[] = []
 
@@ -326,10 +328,7 @@ export class GameWorld {
       }
     }
 
-    for (const colonist of this.colonists) {
-      colonist.needs.hunger = Math.max(0, colonist.needs.hunger - 0.5 * dt)
-      colonist.needs.sleep = Math.max(0, colonist.needs.sleep - 0.3 * dt)
-    }
+    this.needSystem.update(dt, this.colonists)
 
     for (const colonist of this.colonists) {
       if (colonist.state.phase === 'idle') {
