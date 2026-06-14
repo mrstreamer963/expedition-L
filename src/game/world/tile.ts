@@ -1,6 +1,3 @@
-export { TileType } from '../../core/world/tile'
-export type { Tile } from '../../core/world/tile'
-
 export interface TileData {
   color: string
   walkable: boolean

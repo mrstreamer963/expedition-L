@@ -3,13 +3,11 @@ import { tileToScreen } from '../geometry/isoUtils'
 import { drawShadow } from './drawShadow'
 import { drawWall3D } from './drawWall3D'
 import { roundRect } from './roundRect'
-import { RenderSnapshot } from './snapshot'
+import { ClientSnapshot } from '../core'
 
-export function renderEntities(ctx: CanvasRenderingContext2D, snap: RenderSnapshot): void {
+export function renderEntities(ctx: CanvasRenderingContext2D, snap: ClientSnapshot, offsetX: number, offsetY: number): void {
   const hh = TILE_HEIGHT / 2
-  const { offsetX, offsetY } = snap
 
-  // Shadows for food and beds
   for (const food of snap.foods) {
     const { x: sx, y: sy } = tileToScreen(food.x, food.y)
     drawShadow(ctx, sx + offsetX, sy + offsetY, 12, 5)
@@ -19,7 +17,6 @@ export function renderEntities(ctx: CanvasRenderingContext2D, snap: RenderSnapsh
     drawShadow(ctx, sx + offsetX, sy + offsetY, 24, 8)
   }
 
-  // Food: red berry cluster
   for (const food of snap.foods) {
     const { x: sx, y: sy } = tileToScreen(food.x, food.y)
     const fx = sx + offsetX
@@ -38,7 +35,6 @@ export function renderEntities(ctx: CanvasRenderingContext2D, snap: RenderSnapsh
     ctx.fill()
   }
 
-  // Beds: brown mattress with pillow
   for (const bed of snap.beds) {
     const { x: sx, y: sy } = tileToScreen(bed.x, bed.y)
     const bx = sx + offsetX
@@ -49,13 +45,11 @@ export function renderEntities(ctx: CanvasRenderingContext2D, snap: RenderSnapsh
     ctx.strokeStyle = 'rgba(0,0,0,0.2)'
     ctx.lineWidth = 0.5
     ctx.stroke()
-    // Pillow
     ctx.fillStyle = '#d4b080'
     roundRect(ctx, bx + 4, by - 4, 10, 8, 2)
     ctx.fill()
   }
 
-  // Buildings (walls) — 3D rendering
   for (const building of snap.buildings) {
     const { x: sx, y: sy } = tileToScreen(building.x, building.y)
     drawWall3D(ctx, sx + offsetX, sy + offsetY)

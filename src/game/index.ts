@@ -1,25 +1,13 @@
-// Re-export all from core/
-export { GameMap, MAP_WIDTH, MAP_HEIGHT } from '../core/world/map'
-export { TileType } from '../core/world/tile'
-export { findPath } from '../core/world/pathfinding'
-export { Colonist } from '../core/colony/colonist'
-export { createInitialColonists } from '../core/colony/colonistFactory'
-export { JobDispatcher } from '../core/colony/jobDispatcher'
-export { JOB_REGISTRY, JobRegistry } from '../core/colony/jobRegistry'
-export { STATUS_REGISTRY, StatusRegistry } from '../core/colony/statusRegistry'
-export type { JobDefinition, JobContext, ColonistLike, ColonistState, ColonistNeeds, ColonistStatus, StatusDefinition, StatusUpdatable, Vec2 } from '../core/colony/types'
-export { Food } from '../core/entities/food'
-export { Bed } from '../core/entities/bed'
-export { Building, BuildQueue } from '../core/entities/building'
-export type { BuildTask, BuildingType } from '../core/entities/building'
-export { NeedSystem } from '../core/systems/needSystem'
-export { GameWorld } from '../core/gameWorld'
-export { WorldSerializer } from '../core/worldSerializer'
-export type { CoreStateSnapshot } from '../core/types'
-export type { SaveData } from '../core/worldSerializer'
+// Game layer — client-side orchestration and browser code
 export { GameHost } from './gameHost'
-
-// Browser-specific exports
 export { GameLoop } from './gameLoop'
 export { InputHandler } from './input/inputHandler'
 export { TILE_DATA, TILE_WIDTH, TILE_HEIGHT } from './world/tile'
+export {
+  saveToLocalStorage,
+  loadFromLocalStorage,
+  removeFromLocalStorage,
+  downloadSaveFile,
+  uploadSaveFile,
+  AUTOSAVE_KEY,
+} from './persistence'

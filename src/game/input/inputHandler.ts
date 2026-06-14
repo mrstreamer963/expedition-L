@@ -1,5 +1,4 @@
 import { Camera } from '../../geometry/camera'
-import { GameMap } from '../world/map'
 import { screenToTile } from '../../geometry/isoUtils'
 
 export class InputHandler {
@@ -13,23 +12,20 @@ export class InputHandler {
   private camera: Camera
   private canvas: HTMLCanvasElement
 
-  // Callbacks
   onTileClick: ((tileX: number, tileY: number, button: number) => void) | null = null
   onRightClick: ((tileX: number, tileY: number) => void) | null = null
   onTileHover: ((tileX: number, tileY: number) => void) | null = null
   onKey: ((key: string) => void) | null = null
 
-  // Camera movement speed (pixels per key event)
   readonly CAMERA_SPEED = 8
 
-  constructor(camera: Camera, _map: GameMap, canvas: HTMLCanvasElement) {
+  constructor(camera: Camera, canvas: HTMLCanvasElement) {
     this.camera = camera
     this.canvas = canvas
     this.bindEvents()
   }
 
   private bindEvents(): void {
-    // Keyboard
     window.addEventListener('keydown', (e) => {
       this.keys.add(e.key.toLowerCase())
       if (this.onKey) this.onKey(e.key)
@@ -38,13 +34,11 @@ export class InputHandler {
       this.keys.delete(e.key.toLowerCase())
     })
 
-    // Mouse drag for camera
     this.canvas.addEventListener('mousedown', (e) => {
-      if (e.button === 1) { // Middle mouse - always drag
+      if (e.button === 1) {
         this.startDrag(e)
         return
       }
-      // Right click - command movement
       if (e.button === 2) {
         e.preventDefault()
         const rect = this.canvas.getBoundingClientRect()
@@ -73,7 +67,6 @@ export class InputHandler {
       this.isDragging = false
     })
 
-    // Left click on tile
     this.canvas.addEventListener('click', (e) => {
       const rect = this.canvas.getBoundingClientRect()
       const mx = e.clientX - rect.left - this.camera.offsetX
@@ -98,16 +91,14 @@ export class InputHandler {
     this.camera.offsetY = this.dragCameraStartY + dy
   }
 
-  // Update camera from WASD keys (call each frame)
   update(dt: number): void {
-    const speed = this.CAMERA_SPEED * dt * 60 // normalize to ~60fps
+    const speed = this.CAMERA_SPEED * dt * 60
     if (this.keys.has('w') || this.keys.has('ц')) this.camera.pan(0, speed)
     if (this.keys.has('s') || this.keys.has('ы')) this.camera.pan(0, -speed)
     if (this.keys.has('a') || this.keys.has('ф')) this.camera.pan(speed, 0)
     if (this.keys.has('d') || this.keys.has('в')) this.camera.pan(-speed, 0)
   }
 
-  // Convert mouse position to tile coordinates
   getTileAtMouse(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect()
     const mx = clientX - rect.left - this.camera.offsetX
@@ -116,6 +107,5 @@ export class InputHandler {
   }
 
   destroy(): void {
-    // Events are on window/canvas - in a real app we'd clean these up
   }
 }

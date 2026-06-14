@@ -3,9 +3,24 @@ import { renderMap } from '../render/canvas'
 import * as drawTileModule from '../render/drawTile'
 import { GameMap } from '../core/world/map'
 import { TileType } from '../core/world/tile'
+import { ClientSnapshot } from '../core'
+
+function makeSnapshotMap(map: GameMap): ClientSnapshot['map'] {
+  return {
+    width: map.width,
+    height: map.height,
+    tiles: Array.from({ length: map.height }, (_, y) =>
+      Array.from({ length: map.width }, (_, x) => {
+        const tile = map.tileAt(x, y)
+        return { type: tile.type, occupant: tile.occupantId, walkable: tile.walkable }
+      })
+    ),
+  }
+}
 
 describe('renderMap', () => {
   const map = new GameMap()
+  const snapshotMap = makeSnapshotMap(map)
 
   function makeCtx() {
     return {
@@ -21,7 +36,7 @@ describe('renderMap', () => {
   it('calls drawTile for every tile (600 calls for 30x20 map)', () => {
     const ctx = makeCtx()
     const spy = vi.spyOn(drawTileModule, 'drawTile').mockImplementation(() => {})
-    renderMap(ctx, map, 0, 0)
+    renderMap(ctx, snapshotMap, 0, 0)
     expect(spy).toHaveBeenCalledTimes(600)
     spy.mockRestore()
   })
@@ -30,10 +45,10 @@ describe('renderMap', () => {
     const ctx = makeCtx()
     const spy = vi.spyOn(drawTileModule, 'drawTile').mockImplementation(() => {})
 
-    // Set tile (1, 0) to Water via the map
     map.setTile(1, 0, TileType.Water)
+    const updatedSnapshot = makeSnapshotMap(map)
 
-    renderMap(ctx, map, 50, 100)
+    renderMap(ctx, updatedSnapshot, 50, 100)
     expect(spy).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ type: TileType.Water }),

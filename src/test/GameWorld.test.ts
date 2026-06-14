@@ -38,22 +38,10 @@ describe('GameWorld speed controls', () => {
     expect(game.speed).toBe(1)
   })
 
-  it('emits UI state on setSpeed(0) call', () => {
-    const spy = vi.fn()
-    game.onStateChanged = spy
-    game.setSpeed(0)
-    expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ speed: 0 })
-    )
-  })
-
-  it('emits UI state on togglePause call', () => {
-    const spy = vi.fn()
-    game.onStateChanged = spy
-    game.togglePause()
-    expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ speed: 0 })
-    )
+  it('update returns a snapshot', () => {
+    const snap = game.update(1)
+    expect(snap.speed).toBe(1)
+    expect(snap.colonists).toHaveLength(game.colonists.length)
   })
 })
 

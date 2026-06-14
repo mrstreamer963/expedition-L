@@ -1,6 +1,5 @@
-export { collectSnapshot } from './snapshot'
-export type { RenderSnapshot } from './snapshot'
 export { renderWorld } from './worldRenderer'
+export type { RenderContext } from './worldRenderer'
 export { renderMap } from './canvas'
 export { drawColonist } from './drawColonist'
 export { drawShadow } from './drawShadow'

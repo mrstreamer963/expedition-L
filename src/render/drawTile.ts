@@ -1,11 +1,10 @@
-import { Tile } from '../core/world/tile'
 import { TILE_DATA, TILE_WIDTH, TILE_HEIGHT } from '../game/world/tile'
 import { tileToScreen } from '../geometry/isoUtils'
 import { getTilePattern } from './textures'
 
 export function drawTile(
   ctx: CanvasRenderingContext2D,
-  tile: Tile,
+  tile: { type: string; occupant: string | null; walkable: boolean },
   tileX: number,
   tileY: number,
   offsetX: number = 0,
@@ -25,12 +24,11 @@ export function drawTile(
   ctx.lineTo(screenX - hw, screenY)
   ctx.closePath()
 
-  // Use procedural pattern for most tiles, fallback to flat color
   const pattern = getTilePattern(tile.type)
   if (pattern) {
     ctx.fillStyle = pattern
   } else {
-    ctx.fillStyle = TILE_DATA[tile.type].color
+    ctx.fillStyle = TILE_DATA[tile.type]?.color ?? '#333'
   }
   ctx.fill()
 

@@ -68,7 +68,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   activeButton: {
     background: 'rgba(255, 200, 0, 0.3)',
-    borderColor: '#ffc800',
+    border: '1px solid #ffc800',
   },
 }
 

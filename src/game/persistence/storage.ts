@@ -1,4 +1,4 @@
-import { SaveData, WorldSerializer } from './worldSerializer'
+import { SaveData, WorldSerializer } from '../../core/worldSerializer'
 
 export const AUTOSAVE_KEY = 'expedition-autosave'
 

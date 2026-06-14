@@ -11,16 +11,17 @@ import { buildJob } from './colony/jobs/build'
 import { walkJob } from './colony/jobs/walk'
 import { hungryStatus } from './colony/statuses/hungry'
 import { tiredStatus } from './colony/statuses/tired'
-import { JobContext } from './colony/types'
+import { JobContext, ColonistState } from './colony/types'
 import { Food } from './entities/food'
 import { Bed } from './entities/bed'
 import { Building, BuildQueue, BuildTask } from './entities/building'
 import { NeedSystem } from './systems/needSystem'
 import { StatusSystem } from './systems/statusSystem'
 import { WorldSerializer, SaveData } from './worldSerializer'
-import { CoreStateSnapshot } from './types'
+import { findPath } from './world/pathfinding'
+import { GameServer, ClientSnapshot, PlayerAction } from './types'
 
-export class GameWorld {
+export class GameWorld implements GameServer {
   map: GameMap
   colonists: Colonist[]
   jobDispatcher: JobDispatcher
@@ -33,11 +34,6 @@ export class GameWorld {
   paused: boolean = false
   speed: number = 1
   timeScale: number = 1
-
-  onStateChanged: ((snapshot: CoreStateSnapshot) => void) | null = null
-
-  private uiUpdateTimer: number = 0
-  private readonly UI_UPDATE_INTERVAL = 0.5
 
   private needSystem = new NeedSystem()
   private statusSystem = new StatusSystem()
@@ -84,6 +80,80 @@ export class GameWorld {
     }
   }
 
+  create(): ClientSnapshot {
+    return this.generateSnapshot()
+  }
+
+  load(_savedState: SaveData): ClientSnapshot {
+    return this.generateSnapshot()
+  }
+
+  getSnapshot(): ClientSnapshot {
+    return this.generateSnapshot()
+  }
+
+  save(): SaveData {
+    return WorldSerializer.toJSON(this)
+  }
+
+  private generateSnapshot(): ClientSnapshot {
+    return {
+      speed: this.speed,
+      timeScale: this.timeScale,
+      paused: this.paused,
+      map: {
+        width: this.map.width,
+        height: this.map.height,
+        tiles: Array.from({ length: this.map.height }, (_, y) =>
+          Array.from({ length: this.map.width }, (_, x) => {
+            const tile = this.map.tileAt(x, y)
+            return { type: tile.type, occupant: tile.occupantId, walkable: tile.walkable }
+          })
+        ),
+      },
+      colonists: this.colonists.map(c => ({
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        position: { ...c.position },
+        needs: { ...c.needs },
+        statuses: [...c.statuses],
+        state: serializeState(c.state),
+      })),
+      foods: this.foods.map(f => ({ id: f.id, x: f.x, y: f.y })),
+      beds: this.beds.map(b => ({ id: b.id, x: b.x, y: b.y })),
+      buildings: this.buildings.map(b => ({ id: b.id, x: b.x, y: b.y })),
+      buildQueue: this.buildQueue.all.map(t => ({ id: t.id, type: t.type, x: t.x, y: t.y })),
+    }
+  }
+
+  handleAction(action: PlayerAction): ClientSnapshot {
+    if (action.type === 'right-click') {
+      this.handleRightClick(action.x, action.y)
+    } else if (action.type === 'build') {
+      this.addBuildTask(action.x, action.y, action.buildingType)
+    }
+    return this.generateSnapshot()
+  }
+
+  private handleRightClick(x: number, y: number): void {
+    const target = { x, y }
+    const colonist = this.getNearestColonist(target)
+    if (colonist && this.map.isWalkable(x, y)) {
+      if (colonist.state.phase !== 'idle') {
+        colonist.transition({ phase: 'idle' })
+      }
+      this.releaseTile(colonist.position.x, colonist.position.y, colonist.id)
+      const occupied = this.colonists
+        .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
+        .map(c => ({ x: Math.round(c.position.x), y: Math.round(c.position.y) }))
+      const path = findPath(this.map, colonist.position, target, occupied)
+      if (path.length > 0) {
+        colonist.transition({ phase: 'moving', job: 'walk', path })
+      }
+    }
+  }
+
   private placeInitialFood(): Food[] {
     const positions: Vec2[] = [
       { x: 8, y: 8 }, { x: 12, y: 8 }, { x: 8, y: 12 }, { x: 12, y: 12 }, { x: 10, y: 10 },
@@ -107,10 +177,7 @@ export class GameWorld {
   private buildTaskCounter = 0
 
   addBuildTask(tileX: number, tileY: number, type: 'wall' | 'bed' | 'food'): void {
-    if (!this.canBuildAt(tileX, tileY)) {
-      this.pushState()
-      return
-    }
+    if (!this.canBuildAt(tileX, tileY)) return
 
     const task: BuildTask = {
       id: `build-${Date.now()}-${++this.buildTaskCounter}`,
@@ -121,7 +188,6 @@ export class GameWorld {
     }
     this.buildQueue.add(task)
     this.jobDispatcher.onBuildQueued(task, this.getJobContext())
-    this.pushState()
   }
 
   private canBuildAt(x: number, y: number): boolean {
@@ -156,14 +222,12 @@ export class GameWorld {
       this.paused = true
       this.timeScale = 0
     }
-    this.pushState()
   }
 
   setSpeed(speed: number): void {
     this.speed = speed
     this.paused = speed === 0
     this.timeScale = speed === 2 ? 5 : speed === 3 ? 10 : speed
-    this.pushState()
   }
 
   occupyTile(x: number, y: number, id: string): void {
@@ -212,7 +276,7 @@ export class GameWorld {
     }
   }
 
-  update(dt: number): void {
+  update(dt: number): ClientSnapshot {
     const context = this.getJobContext()
 
     for (const colonist of this.colonists) {
@@ -256,43 +320,18 @@ export class GameWorld {
       }
     }
 
-    this.uiUpdateTimer += dt
-    if (this.uiUpdateTimer >= this.UI_UPDATE_INTERVAL) {
-      this.pushState()
-      this.uiUpdateTimer = 0
-    }
-  }
-
-  pushState(): void {
-    if (!this.onStateChanged) return
-
-    const snapshot: CoreStateSnapshot = {
-      timeScale: this.timeScale,
-      speed: this.speed,
-      colonists: this.colonists.map(c => ({
-        id: c.id,
-        name: c.name,
-        color: c.color,
-        stateLabel: c.state.phase,
-        hunger: Math.round(c.needs.hunger),
-        sleep: Math.round(c.needs.sleep),
-        currentJob: c.state.phase === 'working' || c.state.phase === 'moving' || c.state.phase === 'done' ? c.state.job : null,
-        position: c.position,
-        statuses: [...c.statuses],
-      })),
-      foodCount: this.foods.length,
-      bedCount: this.beds.length,
-      buildQueueLength: this.buildQueue.all.length,
-    }
-    this.onStateChanged(snapshot)
-  }
-
-  toJSON(): SaveData {
-    return WorldSerializer.toJSON(this)
+    return this.generateSnapshot()
   }
 
   destroy(): void {
     JOB_REGISTRY.clear()
     STATUS_REGISTRY.clear()
   }
+}
+
+function serializeState(state: ColonistState): ClientSnapshot['colonists'][0]['state'] {
+  if (state.phase === 'moving') return { phase: 'moving', job: state.job, path: state.path.map(p => ({ ...p })) }
+  if (state.phase === 'working') return { phase: 'working', job: state.job }
+  if (state.phase === 'done') return { phase: 'done', job: state.job }
+  return { phase: 'idle' }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { BuildQueue, BuildTask } from '../game/entities/building'
+import { BuildQueue, BuildTask } from '../core/entities/building'
 
 function makeTask(overrides: Partial<BuildTask> = {}): BuildTask {
   return {

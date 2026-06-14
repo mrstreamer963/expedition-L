@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { GameCanvas, TopBar, BuildMenu, ColonistPanel, UIState, INITIAL_UI_STATE, BuildMode } from './ui'
-import { GameHost, SaveData } from './game'
+import { GameHost } from './game'
+import { SaveData } from './core'
 import { loadFromLocalStorage, downloadSaveFile, uploadSaveFile, saveToLocalStorage, AUTOSAVE_KEY } from './game/persistence'
 
 function App() {

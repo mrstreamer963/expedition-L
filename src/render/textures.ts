@@ -1,4 +1,3 @@
-import { TileType } from '../core/world/tile'
 import { TILE_WIDTH, TILE_HEIGHT, TILE_DATA } from '../game/world/tile'
 
 type PatternFactory = (w: number, h: number) => CanvasPattern
@@ -132,8 +131,9 @@ const factories: Record<string, PatternFactory> = {
   dot,
 }
 
-export function getTilePattern(tileType: TileType): CanvasPattern | null {
+export function getTilePattern(tileType: string): CanvasPattern | null {
   const data = TILE_DATA[tileType]
+  if (!data) return null
   const factory = factories[data.pattern]
   if (!factory) return null
   return getOrCreate(data.pattern, factory)
