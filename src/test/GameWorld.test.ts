@@ -59,7 +59,7 @@ describe('GameWorld speed controls', () => {
   })
 })
 
-describe('JobDispatcher need prioritization', () => {
+describe('JobDispatcher status-driven job selection', () => {
   let game: GameWorld
 
   beforeEach(() => {
@@ -83,7 +83,7 @@ describe('JobDispatcher need prioritization', () => {
     game.jobDispatcher.assignBestJob(colonistId, context)
   }
 
-  it('chooses eating when only hunger is below threshold', () => {
+  it('chooses eat when only hungry status is active', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 30, sleep: 80 }
@@ -92,7 +92,7 @@ describe('JobDispatcher need prioritization', () => {
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
-  it('chooses sleeping when only sleep is below threshold', () => {
+  it('chooses sleep when only tired status is active', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 80, sleep: 20 }
@@ -101,7 +101,7 @@ describe('JobDispatcher need prioritization', () => {
     expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
   })
 
-  it('chooses the more urgent need when both are below threshold (hunger lower)', () => {
+  it('chooses eat when hungry is active (higher priority than tired)', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 10, sleep: 20 }
@@ -111,7 +111,7 @@ describe('JobDispatcher need prioritization', () => {
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
-  it('chooses the more urgent need when both are below threshold (sleep lower)', () => {
+  it('chooses hungry over tired when both are active (hunger has higher priority)', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 35, sleep: 5 }
@@ -121,7 +121,7 @@ describe('JobDispatcher need prioritization', () => {
     expect(c.state.phase === 'moving').toBe(true)
   })
 
-  it('chooses hunger when both needs are equally critical', () => {
+  it('chooses eat when both statuses active (hunger has higher priority)', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
@@ -131,7 +131,7 @@ describe('JobDispatcher need prioritization', () => {
     expect(c.state.phase === 'working' && c.state.job === 'eat').toBe(true)
   })
 
-  it('falls back to sleeping when food is not available but bed is', () => {
+  it('falls back to sleep when food is not available but bed is', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 0, sleep: 0 }
@@ -142,7 +142,7 @@ describe('JobDispatcher need prioritization', () => {
     expect(c.state.phase === 'working' && c.state.job === 'sleep').toBe(true)
   })
 
-  it('falls back to eating when bed is not available but food is', () => {
+  it('falls back to eat when bed is not available but food is', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
