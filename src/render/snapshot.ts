@@ -1,8 +1,8 @@
-import { GameMap } from '../game/world/map'
-import { Colonist } from '../game/colony/colonist'
-import { Food } from '../game/entities/food'
-import { Bed } from '../game/entities/bed'
-import { Building, BuildTask } from '../game/entities/building'
+import { GameMap } from '../core/world/map'
+import { Colonist } from '../core/colony/colonist'
+import { Food } from '../core/entities/food'
+import { Bed } from '../core/entities/bed'
+import { Building, BuildTask } from '../core/entities/building'
 import { BuildMode } from '../ui/types'
 
 export interface RenderSnapshot {

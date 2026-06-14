@@ -1,16 +1,14 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { GameWorld } from '../game/gameWorld'
-import { Camera } from '../geometry/camera'
-import { Food } from '../game/entities/food'
-import { Bed } from '../game/entities/bed'
-import * as pathfinding from '../game/world/pathfinding'
+import { GameWorld } from '../core/gameWorld'
+import { Food } from '../core/entities/food'
+import { Bed } from '../core/entities/bed'
+import * as pathfinding from '../core/world/pathfinding'
 
 describe('GameWorld speed controls', () => {
   let game: GameWorld
 
   beforeEach(() => {
-    const camera = new Camera(480, 270)
-    game = new GameWorld(camera)
+    game = new GameWorld()
   })
 
   afterEach(() => {
@@ -42,7 +40,7 @@ describe('GameWorld speed controls', () => {
 
   it('emits UI state on setSpeed(0) call', () => {
     const spy = vi.fn()
-    game.onUiUpdate = spy
+    game.onStateChanged = spy
     game.setSpeed(0)
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({ speed: 0 })
@@ -51,7 +49,7 @@ describe('GameWorld speed controls', () => {
 
   it('emits UI state on togglePause call', () => {
     const spy = vi.fn()
-    game.onUiUpdate = spy
+    game.onStateChanged = spy
     game.togglePause()
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({ speed: 0 })
@@ -63,8 +61,7 @@ describe('JobDispatcher status-driven job selection', () => {
   let game: GameWorld
 
   beforeEach(() => {
-    const camera = new Camera(480, 270)
-    game = new GameWorld(camera)
+    game = new GameWorld()
   })
 
   afterEach(() => {
@@ -182,8 +179,7 @@ describe('Colonist occupancy collision prevention', () => {
   let game: GameWorld
 
   beforeEach(() => {
-    const camera = new Camera(480, 270)
-    game = new GameWorld(camera)
+    game = new GameWorld()
   })
 
   afterEach(() => {

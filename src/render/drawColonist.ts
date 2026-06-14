@@ -1,4 +1,4 @@
-import { Colonist } from '../game/colony/colonist'
+import { Colonist } from '../core/colony/colonist'
 import { tileToScreen } from '../geometry/isoUtils'
 import { roundRect } from './roundRect'
 

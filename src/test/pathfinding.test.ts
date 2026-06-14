@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { findPath, manhattan } from '../game/world/pathfinding'
-import { GameMap } from '../game/world/map'
-import { Tile, TileType } from '../game/world/tile'
+import { findPath, manhattan } from '../core/world/pathfinding'
+import { GameMap } from '../core/world/map'
+import { Tile, TileType } from '../core/world/tile'
 
 const TEST_W = 30
 const TEST_H = 20

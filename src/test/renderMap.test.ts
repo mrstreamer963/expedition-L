@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderMap } from '../render/canvas'
 import * as drawTileModule from '../render/drawTile'
-import { GameMap } from '../game/world/map'
-import { TileType } from '../game/world/tile'
+import { GameMap } from '../core/world/map'
+import { TileType } from '../core/world/tile'
 
 describe('renderMap', () => {
   const map = new GameMap()

@@ -4,7 +4,6 @@ import { Colonist, Vec2 } from './colony/colonist'
 import { createInitialColonists } from './colony/colonistFactory'
 import { Camera } from '../geometry/camera'
 import { UIState, BuildMode } from '../ui/types'
-import { GameSpeed } from '../store/types'
 import { JobDispatcher } from './colony/jobDispatcher'
 import { eventBus } from './eventBus'
 import { JOB_REGISTRY } from './colony/jobRegistry'
@@ -35,7 +34,7 @@ export class GameWorld {
   buildings: Building[]
 
   paused: boolean = false
-  speed: GameSpeed = 1
+  speed: number = 1
   timeScale: number = 1
 
   selectedColonistId: string | null = null
@@ -65,24 +64,6 @@ export class GameWorld {
     }
     eventBus.on('colonist_idle', idleHandler)
     this.cleanupFns.push(() => eventBus.off('colonist_idle', idleHandler))
-
-    const buildHandler = (data: { task: BuildTask }) => {
-      this.jobDispatcher.onEvent({ type: 'build_queued', task: data.task }, this.getJobContext())
-    }
-    eventBus.on('build_queued', buildHandler)
-    this.cleanupFns.push(() => eventBus.off('build_queued', buildHandler))
-
-    const foodConsumedHandler = (data: { position: Vec2 }) => {
-      this.jobDispatcher.onEvent({ type: 'food_consumed', position: data.position }, this.getJobContext())
-    }
-    eventBus.on('food_consumed', foodConsumedHandler)
-    this.cleanupFns.push(() => eventBus.off('food_consumed', foodConsumedHandler))
-
-    const foodBuiltHandler = (data: { position: Vec2 }) => {
-      this.jobDispatcher.onEvent({ type: 'food_built', position: data.position }, this.getJobContext())
-    }
-    eventBus.on('food_built', foodBuiltHandler)
-    this.cleanupFns.push(() => eventBus.off('food_built', foodBuiltHandler))
 
     this.buildQueue = new BuildQueue()
 
@@ -196,7 +177,7 @@ export class GameWorld {
     this.emitUiState()
   }
 
-  setSpeed(speed: GameSpeed): void {
+  setSpeed(speed: number): void {
     this.speed = speed
     this.paused = speed === 0
     this.timeScale = speed === 2 ? 5 : speed === 3 ? 10 : speed
@@ -310,7 +291,7 @@ export class GameWorld {
 
     const state: UIState = {
       timeScale: this.timeScale,
-      speed: this.speed,
+      speed: this.speed as 0 | 1 | 2 | 3,
       foodCount: this.foods.length,
       colonistCount: this.colonists.length,
       selectedColonistId: this.selectedColonistId,

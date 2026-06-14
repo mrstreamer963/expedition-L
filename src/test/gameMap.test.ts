@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { GameMap } from '../game/world/map'
-import { TileType } from '../game/world/tile'
+import { GameMap } from '../core/world/map'
+import { TileType } from '../core/world/tile'
 
 describe('GameMap', () => {
   it('tileAt returns correct tile for valid coordinates', () => {

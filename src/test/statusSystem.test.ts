@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { Colonist } from '../game/colony/colonist'
-import { StatusSystem } from '../game/systems/statusSystem'
-import { STATUS_REGISTRY } from '../game/colony/statusRegistry'
-import { hungryStatus } from '../game/colony/statuses/hungry'
-import { tiredStatus } from '../game/colony/statuses/tired'
+import { Colonist } from '../core/colony/colonist'
+import { StatusSystem } from '../core/systems/statusSystem'
+import { STATUS_REGISTRY } from '../core/colony/statusRegistry'
+import { hungryStatus } from '../core/colony/statuses/hungry'
+import { tiredStatus } from '../core/colony/statuses/tired'
 
 describe('StatusSystem', () => {
   beforeEach(() => {

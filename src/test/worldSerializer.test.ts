@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { WorldSerializer, SaveData, SerializableWorld } from '../game/persistence/worldSerializer'
-import { GameMap } from '../game/world/map'
-import { TileType } from '../game/world/tile'
-import { Colonist } from '../game/colony/colonist'
-import { Food } from '../game/entities/food'
-import { Bed } from '../game/entities/bed'
-import { Building, BuildQueue } from '../game/entities/building'
-import { Camera } from '../geometry/camera'
-import { GameSpeed } from '../store/types'
+import { WorldSerializer, SaveData, SerializableWorld } from '../core/worldSerializer'
+import { GameMap } from '../core/world/map'
+import { TileType } from '../core/world/tile'
+import { Colonist } from '../core/colony/colonist'
+import { Food } from '../core/entities/food'
+import { Bed } from '../core/entities/bed'
+import { Building, BuildQueue } from '../core/entities/building'
 
 function createFloorGrid(width: number, height: number) {
   return Array.from({ length: height }, () =>
@@ -30,10 +28,9 @@ function createTestWorld(): SerializableWorld {
   const buildings = [new Building('bld1', 'wall', 7, 7)]
   const buildQueue = new BuildQueue()
   buildQueue.add({ id: 'q1', type: 'wall', x: 12, y: 12, reservedBy: null })
-  const camera = new Camera(100, 200)
-  const speed: GameSpeed = 2
+  const speed = 2
 
-  return { map, colonists, foods, beds, buildings, buildQueue, camera, speed }
+  return { map, colonists, foods, beds, buildings, buildQueue, speed }
 }
 
 describe('WorldSerializer', () => {
@@ -50,7 +47,6 @@ describe('WorldSerializer', () => {
     expect(data).toHaveProperty('beds')
     expect(data).toHaveProperty('buildings')
     expect(data).toHaveProperty('buildQueue')
-    expect(data).toHaveProperty('camera')
     expect(data).toHaveProperty('speed')
     expect(data.gameName).toBe('expedition-l')
   })

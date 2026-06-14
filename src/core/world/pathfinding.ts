@@ -17,9 +17,10 @@ export function findPath(
   const endY = Math.round(end.y)
 
   if (!map.isWalkable(endX, endY)) return []
-  if (startX === endX && startY === endY) return [{ x: endX, y: endY }]
+  if (startX === endX && startY === endY) return []
 
   const occupiedSet = new Set(occupied.map(p => `${p.x},${p.y}`))
+  occupiedSet.delete(`${startX},${startY}`)
 
   interface Node {
     x: number; y: number; g: number; h: number; f: number; parent: Node | null
@@ -38,7 +39,7 @@ export function findPath(
     if (current.x === endX && current.y === endY) {
       const path: Vec2[] = []
       let node: Node | null = current
-      while (node) {
+      while (node?.parent) {
         path.unshift({ x: node.x, y: node.y })
         node = node.parent
       }

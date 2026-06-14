@@ -1,4 +1,5 @@
-import { Tile, TILE_DATA, TILE_WIDTH, TILE_HEIGHT } from '../game/world/tile'
+import { Tile } from '../core/world/tile'
+import { TILE_DATA, TILE_WIDTH, TILE_HEIGHT } from '../game/world/tile'
 import { tileToScreen } from '../geometry/isoUtils'
 import { getTilePattern } from './textures'
 

@@ -1,22 +1,25 @@
 import { Camera } from '../geometry/camera'
-import { GameWorld } from '../game/gameWorld'
+import { GameWorld } from '../core/gameWorld'
 import { GameLoop } from '../game/gameLoop'
 import { InputHandler } from '../game/input/inputHandler'
 import { renderWorld } from '../render/worldRenderer'
 import { collectSnapshot, RenderSnapshot } from '../render/snapshot'
 import { UIState, BuildMode } from '../ui/types'
-import { GameSpeed } from '../store/types'
-import { SaveData, WorldSerializer } from '../game/persistence/worldSerializer'
+import { SaveData, WorldSerializer } from '../core/worldSerializer'
 import { saveToLocalStorage, AUTOSAVE_KEY } from '../game/persistence/storage'
-import { findPath } from '../game/world/pathfinding'
+import { findPath } from '../core/world/pathfinding'
 
 export class GameController {
   world: GameWorld
+  private camera: Camera
   private gameLoop: GameLoop
   private inputHandler: InputHandler
   private width: number
   private height: number
   private autoSaveCleanup: (() => void) | null = null
+  private buildMode: BuildMode = 'none'
+  private selectedColonistId: string | null = null
+  private hoveredTile: { x: number; y: number } | null = null
 
   onUiUpdate: ((state: UIState) => void) | null = null
 
@@ -24,14 +27,15 @@ export class GameController {
     this.width = canvas.width
     this.height = canvas.height
 
-    const camera = savedState?.camera
-      ? new Camera(savedState.camera.offsetX, savedState.camera.offsetY)
+    this.camera = savedState && 'camera' in savedState
+      ? new Camera((savedState as any).camera.offsetX, (savedState as any).camera.offsetY)
       : new Camera(this.width / 2, 100)
 
-    this.world = new GameWorld(camera, savedState)
-    this.world.onUiUpdate = (state) => this.onUiUpdate?.(state)
+    this.world = new GameWorld(savedState)
+    this.world.onStateChanged = () => this.emitUiState()
+    this.emitUiState()
 
-    this.inputHandler = new InputHandler(camera, this.world.map, canvas)
+    this.inputHandler = new InputHandler(this.camera, this.world.map, canvas)
     this.setupInputCallbacks()
 
     const initialSpeed = this.world.speed === 2 ? 5 : this.world.speed === 3 ? 10 : this.world.speed
@@ -43,8 +47,6 @@ export class GameController {
     this.gameLoop.setSpeed(initialSpeed)
     this.gameLoop.start()
 
-    this.world.emitUiState()
-
     const autoSaveHandler = () => {
       const data = WorldSerializer.toJSON(this.world)
       saveToLocalStorage(AUTOSAVE_KEY, data)
@@ -53,17 +55,22 @@ export class GameController {
     this.autoSaveCleanup = () => window.removeEventListener('beforeunload', autoSaveHandler)
   }
 
+  private emitUiState(): void {
+    if (!this.onUiUpdate) return
+    this.world.pushState()
+  }
+
   private setupInputCallbacks(): void {
     this.inputHandler.onTileClick = (tileX, tileY) => {
-      if (this.world.buildMode !== 'none') {
-        this.world.addBuildTask(tileX, tileY)
+      if (this.buildMode !== 'none') {
+        this.world.addBuildTask(tileX, tileY, this.buildMode as 'wall' | 'bed' | 'food')
         return
       }
       const colonist = this.world.colonists.find(c =>
         Math.round(c.position.x) === tileX && Math.round(c.position.y) === tileY
       )
-      this.world.selectedColonistId = colonist ? colonist.id : null
-      this.world.emitUiState()
+      this.selectedColonistId = colonist ? colonist.id : null
+      this.world.pushState()
     }
 
     this.inputHandler.onRightClick = (tileX, tileY) => {
@@ -86,9 +93,9 @@ export class GameController {
 
     this.inputHandler.onTileHover = (tileX, tileY) => {
       if (tileX >= 0 && tileX < this.world.map.width && tileY >= 0 && tileY < this.world.map.height) {
-        this.world.hoveredTile = { x: tileX, y: tileY }
+        this.hoveredTile = { x: tileX, y: tileY }
       } else {
-        this.world.hoveredTile = null
+        this.hoveredTile = null
       }
     }
 
@@ -122,7 +129,7 @@ export class GameController {
 
   private collectSnapshot(): RenderSnapshot {
     return collectSnapshot({
-      camera: this.world.camera,
+      camera: this.camera,
       canvasWidth: this.width,
       canvasHeight: this.height,
       map: this.world.map,
@@ -131,9 +138,9 @@ export class GameController {
       beds: this.world.beds,
       buildings: this.world.buildings,
       buildQueue: this.world.buildQueue,
-      hoveredTile: this.world.hoveredTile,
-      selectedColonistId: this.world.selectedColonistId,
-      buildMode: this.world.buildMode,
+      hoveredTile: this.hoveredTile,
+      selectedColonistId: this.selectedColonistId,
+      buildMode: this.buildMode,
     })
   }
 
@@ -142,14 +149,14 @@ export class GameController {
     this.gameLoop.setSpeed(this.world.paused ? 0 : (this.world.speed === 2 ? 5 : this.world.speed === 3 ? 10 : this.world.speed))
   }
 
-  setSpeed(speed: GameSpeed): void {
+  setSpeed(speed: number): void {
     this.world.setSpeed(speed)
     const timeScale = speed === 2 ? 5 : speed === 3 ? 10 : speed
     this.gameLoop.setSpeed(timeScale)
   }
 
   setBuildMode(mode: BuildMode): void {
-    this.world.setBuildMode(mode)
+    this.buildMode = mode
   }
 
   destroy(): void {

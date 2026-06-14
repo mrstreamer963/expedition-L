@@ -1,4 +1,5 @@
-import { TileType, TILE_WIDTH, TILE_HEIGHT, TILE_DATA } from '../game/world/tile'
+import { TileType } from '../core/world/tile'
+import { TILE_WIDTH, TILE_HEIGHT, TILE_DATA } from '../game/world/tile'
 
 type PatternFactory = (w: number, h: number) => CanvasPattern
 

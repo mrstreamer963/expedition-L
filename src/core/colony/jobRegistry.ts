@@ -15,6 +15,10 @@ export class JobRegistry {
   getAll(): JobDefinition[] {
     return Array.from(this.defs.values())
   }
+
+  clear(): void {
+    this.defs.clear()
+  }
 }
 
 export const JOB_REGISTRY = new JobRegistry()

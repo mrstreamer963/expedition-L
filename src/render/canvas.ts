@@ -1,4 +1,4 @@
-import { GameMap } from '../game/world/map'
+import { GameMap } from '../core/world/map'
 import { drawTile } from './drawTile'
 
 /**

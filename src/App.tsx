@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { GameCanvas, TopBar, BuildMenu, ColonistPanel, UIState, INITIAL_UI_STATE, BuildMode } from './ui'
-import { GameController } from './controller'
-import { SaveData, WorldSerializer } from './game/persistence'
+import { GameHost, SaveData } from './game'
 import { loadFromLocalStorage, downloadSaveFile, uploadSaveFile, saveToLocalStorage, AUTOSAVE_KEY } from './game/persistence'
 
 function App() {
   const [uiState, setUiState] = useState<UIState>(INITIAL_UI_STATE)
-  const controllerRef = useRef<GameController | null>(null)
+  const controllerRef = useRef<GameHost | null>(null)
 
   const startNewGame = useCallback((canvas: HTMLCanvasElement, savedState?: SaveData) => {
     if (controllerRef.current) {
       controllerRef.current.destroy()
     }
-    const controller = new GameController(canvas, savedState)
+    const controller = new GameHost(canvas, savedState)
     controller.onUiUpdate = (state) => setUiState({ ...state })
     controllerRef.current = controller
     ;(window as any).__game = controller
@@ -42,7 +41,7 @@ function App() {
   const handleSave = useCallback(() => {
     const ctrl = controllerRef.current
     if (!ctrl) return
-    const data = WorldSerializer.toJSON(ctrl.world)
+    const data = ctrl.getSaveData()
     saveToLocalStorage(AUTOSAVE_KEY, data)
     downloadSaveFile(data)
   }, [])

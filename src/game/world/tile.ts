@@ -1,4 +1,5 @@
-export { TileType, Tile } from '../../core/world/tile'
+export { TileType } from '../../core/world/tile'
+export type { Tile } from '../../core/world/tile'
 
 export interface TileData {
   color: string
