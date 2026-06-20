@@ -24,7 +24,7 @@ npm run preview # предпросмотр сборки
 
 - **Изометрическая карта** 30×20 тайлов с процедурной генерацией
 - **Поселенцы** (3 шт.) с потребностями: голод и сон
-- **FSM поселенцев:** idle → moving → working → done
+- **FSM поселенцев:** idle → assigned → moving → working → done
 - **Система задач:** еда, сон, строительство, перемещение (правый клик)
 - **A\* pathfinding** (4-направленный, с обходом препятствий)
 - **Строительство:** стены, кровати, запасы еды (очередь + бронирование)
@@ -37,17 +37,28 @@ npm run preview # предпросмотр сборки
 
 ```
 src/
-├── controller/    # связка React ↔ игровой движок
-├── game/          # чистая игровая логика (без React)
-│   ├── colony/    # поселенцы, задачи, диспетчер
-│   ├── entities/  # еда, кровати, здания
-│   ├── input/     # ввод (клавиатура, мышь)
-│   ├── persistence/ # сохранение/загрузка
-│   ├── systems/   # системы (потребности)
-│   └── world/     # карта, pathfinding
-├── render/        # Canvas-рендерер (изометрический)
-├── ui/            # React-компоненты (TopBar, BuildMenu, ColonistPanel)
-└── test/          # тесты
+├── core/           # чистый игровой движок (без DOM/браузера)
+│   ├── colony/     # колонисты, FSM, задачи, реестры
+│   │   ├── jobs/   # eat, sleep, build, walk
+│   │   └── statuses/ # hungry, tired
+│   ├── entities/   # Food, Bed, Building, BuildQueue
+│   ├── systems/    # NeedSystem, StatusSystem
+│   ├── world/      # GameMap, Tile, pathfinding (A*)
+│   ├── gameWorld.ts    # главный цикл (GameServer impl)
+│   ├── worldSerializer.ts  # сохранение/загрузка v2
+│   ├── types.ts    # GameServer, ClientSnapshot, PlayerAction
+│   └── index.ts
+├── game/           # клиентская оркестрация (браузер)
+│   ├── gameHost.ts     # мост core ↔ React ↔ Canvas
+│   ├── gameLoop.ts     # requestAnimationFrame, 60 TPS
+│   ├── input/          # клавиатура, мышь
+│   ├── persistence/    # localStorage + файлы
+│   └── index.ts
+├── geometry/        # чистая математика (камера, изометрия)
+├── render/          # Canvas 2D изометрический рендерер
+├── ui/              # React-компоненты (TopBar, BuildMenu, ColonistPanel)
+├── store/           # типы состояния React
+└── test/            # 71 тест (Vitest)
 ```
 
 ## Управление
