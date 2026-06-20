@@ -35,12 +35,20 @@ The renderer SHALL draw food (berry clusters), beds (brown mattress with pillow)
 - **WHEN** a wall building is rendered
 - **THEN** it SHALL appear as a 3-faced pseudo-3D block (top, front gradient, right gradient)
 
-### Requirement: Colonists are rendered with need bars and names
-Each colonist SHALL be drawn as a stick figure (legs, body, head) with color-coded hunger/sleep bars above the head, a name label, and eyes (hidden when sleeping).
+### Requirement: Colonist render reads FSM phase
+DrawColonist SHALL read `colonist.state.phase` instead of `colonist.state` (string) to determine visual appearance.
 
-#### Scenario: Colonist is drawn with full HUD
-- **WHEN** a colonist is rendered
-- **THEN** it SHALL show: colored body/head/legs, hunger bar (green > 40, red ≤ 40), sleep bar (blue > 25, orange ≤ 25), name label, and eyes if not sleeping
+#### Scenario: Working phase shows eyes open
+- **WHEN** a colonist is in `working` phase
+- **THEN** eyes SHALL be rendered (open)
+
+#### Scenario: Working phase with sleep job shows eyes closed
+- **WHEN** a colonist is in `working` phase with `job === 'sleep'`
+- **THEN** eyes SHALL NOT be rendered (closed)
+
+#### Scenario: Idle phase shows eyes open
+- **WHEN** a colonist is in `idle` phase
+- **THEN** eyes SHALL be rendered (open)
 
 ### Requirement: Overlays render build previews and highlights
 The renderer SHALL draw: semi-transparent ghost previews for queued build tasks, green/red highlight diamond on hover (in build mode), yellow selection diamond on selected colonist, and semi-transparent path lines for moving colonists.
@@ -48,3 +56,14 @@ The renderer SHALL draw: semi-transparent ghost previews for queued build tasks,
 #### Scenario: Hover tile shows valid/invalid indicator
 - **WHEN** player hovers a tile in build mode
 - **THEN** a diamond outline SHALL appear at that tile: green with ghost preview if buildable, red if blocked
+
+### Requirement: Path overlay reads moving phase
+RenderOverlay SHALL check `colonist.state.phase === 'moving'` instead of `colonist.state === 'walking'`.
+
+#### Scenario: Moving phase shows path
+- **WHEN** a colonist is in `moving` phase with non-empty path
+- **THEN** the path line SHALL be rendered
+
+#### Scenario: Non-moving phase hides path
+- **WHEN** a colonist is not in `moving` phase
+- **THEN** the path line SHALL NOT be rendered
