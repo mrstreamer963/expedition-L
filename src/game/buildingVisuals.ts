@@ -21,11 +21,7 @@ export function getAllBuildingTypes(): string[] {
   return Array.from(registry.keys())
 }
 
-function buildWall3D(ctx: CanvasRenderingContext2D, sx: number, sy: number): void {
-  drawWall3D(ctx, sx, sy)
-}
-
-function buildFood(ctx: CanvasRenderingContext2D, sx: number, sy: number, alpha: number = 1): void {
+function drawFood(ctx: CanvasRenderingContext2D, sx: number, sy: number, alpha: number = 1): void {
   ctx.save()
   ctx.globalAlpha = alpha
   ctx.fillStyle = '#d44040'
@@ -43,7 +39,7 @@ function buildFood(ctx: CanvasRenderingContext2D, sx: number, sy: number, alpha:
   ctx.restore()
 }
 
-function buildBed(ctx: CanvasRenderingContext2D, sx: number, sy: number, alpha: number = 1): void {
+function drawBed(ctx: CanvasRenderingContext2D, sx: number, sy: number, alpha: number = 1): void {
   ctx.save()
   ctx.globalAlpha = alpha
   ctx.fillStyle = '#c49a6c'
@@ -60,18 +56,18 @@ function buildBed(ctx: CanvasRenderingContext2D, sx: number, sy: number, alpha: 
 
 registerBuildingVisual('wall', {
   label: 'Стена',
-  renderEntity: (ctx, sx, sy) => buildWall3D(ctx, sx, sy),
-  renderGhost: (ctx, sx, sy) => buildWall3D(ctx, sx, sy),
+  renderEntity: (ctx, sx, sy) => drawWall3D(ctx, sx, sy),
+  renderGhost: (ctx, sx, sy) => drawWall3D(ctx, sx, sy),
 })
 
 registerBuildingVisual('food', {
   label: 'Еда',
-  renderEntity: (ctx, sx, sy) => buildFood(ctx, sx, sy, 1),
-  renderGhost: (ctx, sx, sy) => buildFood(ctx, sx, sy, 0.35),
+  renderEntity: (ctx, sx, sy) => drawFood(ctx, sx, sy, 1),
+  renderGhost: (ctx, sx, sy) => drawFood(ctx, sx, sy, 0.35),
 })
 
 registerBuildingVisual('bed', {
   label: 'Кровать',
-  renderEntity: (ctx, sx, sy) => buildBed(ctx, sx, sy, 1),
-  renderGhost: (ctx, sx, sy) => buildBed(ctx, sx, sy, 0.35),
+  renderEntity: (ctx, sx, sy) => drawBed(ctx, sx, sy, 1),
+  renderGhost: (ctx, sx, sy) => drawBed(ctx, sx, sy, 0.35),
 })
