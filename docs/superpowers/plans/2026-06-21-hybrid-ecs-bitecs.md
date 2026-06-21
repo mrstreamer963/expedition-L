@@ -20,13 +20,13 @@
 - Create: `src/core/components/solid.ts`
 - Create: `src/core/components/index.ts`
 
-- [ ] **Step 1:** `npm install bitecs@0.4.0`
+- [x] **Step 1:** `npm install bitecs@0.4.0`
 
-- [ ] **Step 2:** Create 6 component files with typed arrays/objects (see design doc)
+- [x] **Step 2:** Create 6 component files with typed arrays/objects (see design doc)
 
-- [ ] **Step 3:** `npx tsc --noEmit` — verify no errors
+- [x] **Step 3:** `npx tsc --noEmit` — verify no errors
 
-- [ ] **Step 4:** `git add -A && git commit -m "feat: add BitECS components (Position, Renderable, Edible, Sleepable, Solid)"`
+- [x] **Step 4:** `git add -A && git commit -m "feat: add BitECS components (Position, Renderable, Edible, Sleepable, Solid)"`
 
 ---
 
@@ -42,22 +42,22 @@
 
 This is the big one. Execute all changes: create BuildQueue from building.ts content, update WorldState to add `ecs`, update GameWorld/jobs/serializer/tests.
 
-- [ ] **Step 1:** Create `src/core/colony/buildQueue.ts` with BuildingType, BuildTask, BuildQueue (extracted from building.ts)
+- [x] **Step 1:** Create `src/core/colony/buildQueue.ts` with BuildingType, BuildTask, BuildQueue (extracted from building.ts)
 
-- [ ] **Step 2:** Update WorldState: add `ecs: World`, remove foods/beds/buildings arrays
+- [x] **Step 2:** Update WorldState: add `ecs: World`, remove foods/beds/buildings arrays
 
-- [ ] **Step 3:** Update GameWorld: ECS init, entity creation, query-based snapshot, remove getters
+- [x] **Step 3:** Update GameWorld: ECS init, entity creation, query-based snapshot, remove getters
 
-- [ ] **Step 4:** Update job files (eat.ts, sleep.ts, build.ts): ECS queries + entity creation
+- [x] **Step 4:** Update job files (eat.ts, sleep.ts, build.ts): ECS queries + entity creation
 
-- [ ] **Step 5:** Update WorldSerializer: fromJSON takes ecs param, toJSON takes ecs, entity creation in fromJSON
+- [x] **Step 5:** Update WorldSerializer: fromJSON takes ecs param, toJSON takes ecs, entity creation in fromJSON
 
-- [ ] **Step 6:** Update 3 test files for ECS
+- [x] **Step 6:** Update 3 test files for ECS
 
-- [ ] **Step 7:** `npx tsc --noEmit` — verify no errors
+- [x] **Step 7:** `npx tsc --noEmit` — verify no errors
 
-- [ ] **Step 8:** `npm test` — all green
+- [x] **Step 8:** `npm test` — all green
 
-- [ ] **Step 9:** Delete old files: `src/core/entities/food.ts`, `bed.ts`, `building.ts`
+- [x] **Step 9:** Delete old files: `src/core/entities/food.ts`, `bed.ts`, `building.ts`
 
-- [ ] **Step 10:** `git add -A && git commit -m "refactor: hybrid ECS with BitECS for items/objects"`
+- [x] **Step 10:** `git add -A && git commit -m "refactor: replace Food/Bed/Building entity classes with BitECS ECS"`
