@@ -36,8 +36,6 @@ export interface ClientSnapshot {
     statuses: string[]
     state: { phase: string; job?: string; path?: Vec2[] }
   }[]
-  foods: { id: string; x: number; y: number }[]
-  beds: { id: string; x: number; y: number }[]
-  buildings: { id: string; x: number; y: number }[]
+  entities: { id: string; type: string; x: number; y: number }[]
   buildQueue: { id: string; type: string; x: number; y: number }[]
 }

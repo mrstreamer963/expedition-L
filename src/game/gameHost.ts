@@ -133,7 +133,7 @@ export class GameHost {
     this.onUiUpdate({
       timeScale,
       speed: speed as 0 | 1 | 2 | 3,
-      foodCount: snap.foods.length,
+      foodCount: snap.entities.filter(e => e.type === 'food').length,
       colonistCount: snap.colonists.length,
       selectedColonistId: this.selectedColonistId,
       colonists: snap.colonists.map(c => ({

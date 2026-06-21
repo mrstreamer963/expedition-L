@@ -8,9 +8,7 @@ function canBuildAt(x: number, y: number, snap: ClientSnapshot): boolean {
   const tile = snap.map.tiles[y]?.[x]
   if (!tile) return false
   if (tile.type === 'Rock' || tile.type === 'Water') return false
-  if (snap.foods.some(f => f.x === x && f.y === y)) return false
-  if (snap.beds.some(b => b.x === x && b.y === y)) return false
-  if (snap.buildings.some(b => b.x === x && b.y === y)) return false
+  if (snap.entities.some(e => e.x === x && e.y === y)) return false
   return true
 }
 

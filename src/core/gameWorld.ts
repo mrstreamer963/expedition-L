@@ -21,9 +21,9 @@ import { WorldState } from './worldState'
 import { WorldSerializer, SaveData } from './worldSerializer'
 import { findPath } from './world/pathfinding'
 import { GameServer, ClientSnapshot, PlayerAction } from './types'
-import { Position, Edible, Sleepable, Solid } from './components'
+import { Position, Renderable } from './components'
 import { BuildingType, BUILDING_CONFIGS } from './colony/buildingTypes'
-import { createBuildingEntity, findEntityAt } from './entityFactory'
+import { createBuildingEntity } from './entityFactory'
 
 export class GameWorld implements GameServer {
   readonly state: WorldState
@@ -138,9 +138,12 @@ export class GameWorld implements GameServer {
         statuses: [...c.statuses],
         state: serializeState(c.state),
       })),
-      foods: Array.from(query(this.state.ecs, [Edible, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
-      beds: Array.from(query(this.state.ecs, [Sleepable, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
-      buildings: Array.from(query(this.state.ecs, [Solid, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
+      entities: Array.from(query(this.state.ecs, [Renderable, Position])).map(eid => ({
+        id: `e${eid}`,
+        type: Renderable[eid].type,
+        x: Position.x[eid],
+        y: Position.y[eid],
+      })),
       buildQueue: this.state.buildQueue.all.map(t => ({ id: t.id, type: t.type, x: t.x, y: t.y })),
     }
   }
@@ -199,9 +202,9 @@ export class GameWorld implements GameServer {
   private canBuildAt(x: number, y: number): boolean {
     const tile = this.state.map.tileAt(x, y)
     if (tile.type === TileType.Rock || tile.type === TileType.Water) return false
-    if (findEntityAt(this.state.ecs, x, y, Edible) !== null) return false
-    if (findEntityAt(this.state.ecs, x, y, Sleepable) !== null) return false
-    if (findEntityAt(this.state.ecs, x, y, Solid) !== null) return false
+    for (const eid of query(this.state.ecs, [Position])) {
+      if (Position.x[eid] === x && Position.y[eid] === y) return false
+    }
     return true
   }
 
