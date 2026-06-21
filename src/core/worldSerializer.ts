@@ -1,11 +1,12 @@
-import { World, createWorld, addEntity, addComponent, query } from 'bitecs'
+import { World, createWorld, query } from 'bitecs'
 import { GameMap } from './world/map'
 import { TileType, Tile } from './world/tile'
 import { Colonist } from './colony/colonist'
 import { ColonistState } from './colony/types'
 import { BuildQueue, BuildTask } from './colony/buildQueue'
-import { BuildingType, BUILDING_CONFIGS } from './colony/buildingTypes'
+import { BuildingType } from './colony/buildingTypes'
 import { Position, Renderable, Edible, Sleepable, Solid } from './components'
+import { createBuildingEntity } from './entityFactory'
 
 export interface SerializableTile {
   type: TileType
@@ -120,31 +121,13 @@ export class WorldSerializer {
 
     const ecs = createWorld()
     for (const f of data.foods) {
-      const eid = addEntity(ecs)
-      Position.x[eid] = f.x; Position.y[eid] = f.y
-      addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: BuildingType.Food }
-      const config = BUILDING_CONFIGS[BuildingType.Food]
-      if (config) addComponent(ecs, eid, config.component)
+      createBuildingEntity(ecs, f.x, f.y, BuildingType.Food)
     }
     for (const b of data.beds) {
-      const eid = addEntity(ecs)
-      Position.x[eid] = b.x; Position.y[eid] = b.y
-      addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: BuildingType.Bed }
-      const config = BUILDING_CONFIGS[BuildingType.Bed]
-      if (config) addComponent(ecs, eid, config.component)
+      createBuildingEntity(ecs, b.x, b.y, BuildingType.Bed)
     }
     for (const b of data.buildings) {
-      const eid = addEntity(ecs)
-      Position.x[eid] = b.x; Position.y[eid] = b.y
-      addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: b.type }
-      const config = BUILDING_CONFIGS[b.type]
-      if (config) addComponent(ecs, eid, config.component)
+      createBuildingEntity(ecs, b.x, b.y, b.type)
     }
 
     const buildQueue = new BuildQueue()

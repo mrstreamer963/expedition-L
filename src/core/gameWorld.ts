@@ -1,4 +1,4 @@
-import { World, createWorld, addEntity, addComponent, query } from 'bitecs'
+import { World, createWorld, query } from 'bitecs'
 import { GameMap } from './world/map'
 import { TileType } from './world/tile'
 import { Colonist, Vec2 } from './colony/colonist'
@@ -21,8 +21,9 @@ import { WorldState } from './worldState'
 import { WorldSerializer, SaveData } from './worldSerializer'
 import { findPath } from './world/pathfinding'
 import { GameServer, ClientSnapshot, PlayerAction } from './types'
-import { Position, Renderable, Edible, Sleepable, Solid } from './components'
+import { Position, Edible, Sleepable, Solid } from './components'
 import { BuildingType, BUILDING_CONFIGS } from './colony/buildingTypes'
+import { createBuildingEntity, findEntityAt } from './entityFactory'
 
 export class GameWorld implements GameServer {
   readonly state: WorldState
@@ -174,12 +175,7 @@ export class GameWorld implements GameServer {
   private placeInitialEntities(ecs: World, map: GameMap, type: BuildingType, positions: Vec2[]): void {
     const config = BUILDING_CONFIGS[type]
     for (const p of positions) {
-      const eid = addEntity(ecs)
-      Position.x[eid] = p.x; Position.y[eid] = p.y
-      addComponent(ecs, eid, config.component)
-      addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type }
+      createBuildingEntity(ecs, p.x, p.y, type)
       map.setTile(p.x, p.y, config.tileType)
     }
   }
@@ -203,10 +199,9 @@ export class GameWorld implements GameServer {
   private canBuildAt(x: number, y: number): boolean {
     const tile = this.state.map.tileAt(x, y)
     if (tile.type === TileType.Rock || tile.type === TileType.Water) return false
-    const ecs = this.state.ecs
-    for (const eid of query(ecs, [Edible, Position])) { if (Position.x[eid] === x && Position.y[eid] === y) return false }
-    for (const eid of query(ecs, [Sleepable, Position])) { if (Position.x[eid] === x && Position.y[eid] === y) return false }
-    for (const eid of query(ecs, [Solid, Position])) { if (Position.x[eid] === x && Position.y[eid] === y) return false }
+    if (findEntityAt(this.state.ecs, x, y, Edible) !== null) return false
+    if (findEntityAt(this.state.ecs, x, y, Sleepable) !== null) return false
+    if (findEntityAt(this.state.ecs, x, y, Solid) !== null) return false
     return true
   }
 

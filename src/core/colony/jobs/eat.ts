@@ -1,7 +1,8 @@
-import { query, removeEntity } from 'bitecs'
+import { query } from 'bitecs'
 import { JobDefinition, ColonistLike } from '../types'
 import { WorldState } from '../../worldState'
 import { Position, Edible } from '../../components'
+import { removeEntityAt } from '../../entityFactory'
 
 export const eatJob: JobDefinition = {
   type: 'eat',
@@ -37,12 +38,7 @@ export const eatJob: JobDefinition = {
     const { ecs } = context
     const cx = Math.round(colonist.position.x)
     const cy = Math.round(colonist.position.y)
-    for (const eid of query(ecs, [Edible, Position])) {
-      if (Position.x[eid] === cx && Position.y[eid] === cy) {
-        removeEntity(ecs, eid)
-        break
-      }
-    }
+    removeEntityAt(ecs, cx, cy, Edible)
     colonist.needs.hunger = Math.min(100, colonist.needs.hunger + 40)
   },
 

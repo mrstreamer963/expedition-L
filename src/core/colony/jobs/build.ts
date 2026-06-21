@@ -1,8 +1,7 @@
-import { addEntity, addComponent } from 'bitecs'
 import { JobDefinition, ColonistLike } from '../types'
 import { WorldState } from '../../worldState'
-import { Position, Renderable } from '../../components'
 import { BUILDING_CONFIGS } from '../buildingTypes'
+import { createBuildingEntity } from '../../entityFactory'
 
 export const buildJob: JobDefinition = {
   type: 'build',
@@ -31,12 +30,7 @@ export const buildJob: JobDefinition = {
     const tx = Math.round(colonist.position.x)
     const ty = Math.round(colonist.position.y)
 
-    const eid = addEntity(ecs)
-    Position.x[eid] = tx; Position.y[eid] = ty
-    addComponent(ecs, eid, Position)
-    addComponent(ecs, eid, Renderable)
-    addComponent(ecs, eid, config.component)
-    Renderable[eid] = { type: task.type }
+    createBuildingEntity(ecs, tx, ty, task.type)
     map.setTile(tx, ty, config.tileType)
 
     colonist.reservedBuildTaskId = null
