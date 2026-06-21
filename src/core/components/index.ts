@@ -1,0 +1,6 @@
+export { Position } from './position'
+export { Renderable } from './renderable'
+export type { RenderableData } from './renderable'
+export { Edible } from './edible'
+export { Sleepable } from './sleepable'
+export { Solid } from './solid'
