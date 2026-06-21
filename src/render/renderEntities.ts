@@ -8,16 +8,16 @@ import { ClientSnapshot } from '../core'
 export function renderEntities(ctx: CanvasRenderingContext2D, snap: ClientSnapshot, offsetX: number, offsetY: number): void {
   const hh = TILE_HEIGHT / 2
 
-  for (const food of snap.foods) {
+  for (const food of snap.entities.filter(e => e.type === 'food')) {
     const { x: sx, y: sy } = tileToScreen(food.x, food.y)
     drawShadow(ctx, sx + offsetX, sy + offsetY, 12, 5)
   }
-  for (const bed of snap.beds) {
+  for (const bed of snap.entities.filter(e => e.type === 'bed')) {
     const { x: sx, y: sy } = tileToScreen(bed.x, bed.y)
     drawShadow(ctx, sx + offsetX, sy + offsetY, 24, 8)
   }
 
-  for (const food of snap.foods) {
+  for (const food of snap.entities.filter(e => e.type === 'food')) {
     const { x: sx, y: sy } = tileToScreen(food.x, food.y)
     const fx = sx + offsetX
     const fy = sy + offsetY - hh - 4
@@ -35,7 +35,7 @@ export function renderEntities(ctx: CanvasRenderingContext2D, snap: ClientSnapsh
     ctx.fill()
   }
 
-  for (const bed of snap.beds) {
+  for (const bed of snap.entities.filter(e => e.type === 'bed')) {
     const { x: sx, y: sy } = tileToScreen(bed.x, bed.y)
     const bx = sx + offsetX
     const by = sy + offsetY - hh - 4
@@ -50,7 +50,7 @@ export function renderEntities(ctx: CanvasRenderingContext2D, snap: ClientSnapsh
     ctx.fill()
   }
 
-  for (const building of snap.buildings) {
+  for (const building of snap.entities.filter(e => e.type === 'wall')) {
     const { x: sx, y: sy } = tileToScreen(building.x, building.y)
     drawWall3D(ctx, sx + offsetX, sy + offsetY)
   }
