@@ -1,9 +1,8 @@
+import { addEntity, addComponent } from 'bitecs'
 import { JobDefinition, ColonistLike } from '../types'
 import { WorldState } from '../../worldState'
-import { Building } from '../../entities/building'
-import { Bed } from '../../entities/bed'
-import { Food } from '../../entities/food'
 import { TileType } from '../../world/tile'
+import { Position, Renderable, Edible, Sleepable, Solid } from '../../components'
 
 interface ColonistWithBuildTask extends ColonistLike {
   reservedBuildTaskId: string | null
@@ -26,24 +25,33 @@ export const buildJob: JobDefinition = {
   onStart(_colonist: ColonistLike, _context: WorldState): void {},
 
   onComplete(colonist: ColonistLike, context: WorldState): void {
-    const { buildQueue, buildings, map, foods, beds } = context
+    const { ecs, buildQueue, map } = context
     const taskId = resolveTaskId(colonist, context)
     if (!taskId) return
     const task = buildQueue.removeById(taskId)
     if (!task) return
     const tx = Math.round(colonist.position.x)
     const ty = Math.round(colonist.position.y)
+
+    const eid = addEntity(ecs)
+    Position.x[eid] = tx; Position.y[eid] = ty
+    addComponent(ecs, eid, Position)
+    addComponent(ecs, eid, Renderable)
+
     switch (task.type) {
       case 'wall':
-        buildings.push(new Building(task.id, 'wall', tx, ty))
+        addComponent(ecs, eid, Solid)
+        Renderable[eid] = { type: 'wall', color: '#888' }
         map.setTile(tx, ty, TileType.Wall)
         break
       case 'bed':
-        beds.push(new Bed(task.id, tx, ty))
+        addComponent(ecs, eid, Sleepable)
+        Renderable[eid] = { type: 'bed', color: '#c49a6c' }
         map.setTile(tx, ty, TileType.Bed)
         break
       case 'food':
-        foods.push(new Food(task.id, tx, ty))
+        addComponent(ecs, eid, Edible)
+        Renderable[eid] = { type: 'food', color: '#d44040' }
         map.setTile(tx, ty, TileType.Food)
         break
     }

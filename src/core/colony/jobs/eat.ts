@@ -1,5 +1,7 @@
+import { query, removeEntity } from 'bitecs'
 import { JobDefinition, ColonistLike } from '../types'
 import { WorldState } from '../../worldState'
+import { Position, Edible } from '../../components'
 
 export const eatJob: JobDefinition = {
   type: 'eat',
@@ -17,9 +19,10 @@ export const eatJob: JobDefinition = {
         .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
         .map(c => `${Math.round(c.position.x)},${Math.round(c.position.y)}`)
     )
-    const foods = context.foods
-      .filter(f => !occupied.has(`${f.x},${f.y}`))
-      .map(f => ({ x: f.x, y: f.y }))
+    const { ecs } = context
+    const foods = Array.from(query(ecs, [Edible, Position]))
+      .filter(eid => !occupied.has(`${Position.x[eid]},${Position.y[eid]}`))
+      .map(eid => ({ x: Position.x[eid], y: Position.y[eid] }))
     const cx = colonist.position.x
     const cy = colonist.position.y
     foods.sort((a, b) =>
@@ -31,15 +34,16 @@ export const eatJob: JobDefinition = {
   onStart(_colonist: ColonistLike, _context: WorldState): void {},
 
   onComplete(colonist: ColonistLike, context: WorldState): void {
-    const foods = context.foods
-    const idx = foods.findIndex(f =>
-      Math.round(f.x) === Math.round(colonist.position.x) &&
-      Math.round(f.y) === Math.round(colonist.position.y)
-    )
-    if (idx !== -1) {
-      foods.splice(idx, 1)
-      colonist.needs.hunger = Math.min(100, colonist.needs.hunger + 40)
+    const { ecs } = context
+    const cx = Math.round(colonist.position.x)
+    const cy = Math.round(colonist.position.y)
+    for (const eid of query(ecs, [Edible, Position])) {
+      if (Position.x[eid] === cx && Position.y[eid] === cy) {
+        removeEntity(ecs, eid)
+        break
+      }
     }
+    colonist.needs.hunger = Math.min(100, colonist.needs.hunger + 40)
   },
 
   onCancel(_colonist: ColonistLike, _context: WorldState): void {},

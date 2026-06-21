@@ -1,23 +1,5 @@
 export type BuildingType = 'wall' | 'bed' | 'food'
 
-export class Building {
-  id: string
-  type: BuildingType
-  x: number
-  y: number
-
-  constructor(id: string, type: BuildingType, x: number, y: number) {
-    this.id = id
-    this.type = type
-    this.x = x
-    this.y = y
-  }
-
-  toJSON(): { id: string; type: BuildingType; x: number; y: number } {
-    return { id: this.id, type: this.type, x: this.x, y: this.y }
-  }
-}
-
 export interface BuildTask {
   id: string
   type: BuildingType

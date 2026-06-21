@@ -1,3 +1,4 @@
+import { World, createWorld, addEntity, addComponent, query } from 'bitecs'
 import { GameMap } from './world/map'
 import { TileType } from './world/tile'
 import { Colonist, Vec2 } from './colony/colonist'
@@ -12,9 +13,7 @@ import { walkJob } from './colony/jobs/walk'
 import { hungryStatus } from './colony/statuses/hungry'
 import { tiredStatus } from './colony/statuses/tired'
 import { ColonistState } from './colony/types'
-import { Food } from './entities/food'
-import { Bed } from './entities/bed'
-import { Building, BuildQueue, BuildTask } from './entities/building'
+import { BuildQueue, BuildTask } from './colony/buildQueue'
 import { NeedSystem } from './systems/needSystem'
 import { StatusSystem } from './systems/statusSystem'
 import { SystemPipeline } from './systems/systemPipeline'
@@ -22,6 +21,7 @@ import { WorldState } from './worldState'
 import { WorldSerializer, SaveData } from './worldSerializer'
 import { findPath } from './world/pathfinding'
 import { GameServer, ClientSnapshot, PlayerAction } from './types'
+import { Position, Renderable, Edible, Sleepable, Solid } from './components'
 
 export class GameWorld implements GameServer {
   readonly state: WorldState
@@ -46,12 +46,10 @@ export class GameWorld implements GameServer {
     if (savedState) {
       const init = WorldSerializer.fromJSON(savedState)
       this.state = new WorldState({
+        ecs: init.ecs,
         map: init.map,
         colonists: init.colonists,
         buildQueue: init.buildQueue,
-        foods: init.foods,
-        beds: init.beds,
-        buildings: init.buildings,
       })
       this.speed = [0, 1, 2, 3].includes(init.speed) ? init.speed : 2
       this.timeScale = this.speed === 2 ? 5 : this.speed === 3 ? 10 : this.speed
@@ -70,18 +68,17 @@ export class GameWorld implements GameServer {
         this.pipeline.deserialize(savedState.systemData, this.state)
       }
     } else {
+      const ecs = createWorld()
       const map = new GameMap()
       const colonists = createInitialColonists()
       const buildQueue = new BuildQueue()
-      const foods = this.placeInitialFood(map)
-      const beds = this.placeInitialBeds(map)
+      this.placeInitialFood(ecs, map)
+      this.placeInitialBeds(ecs, map)
       this.state = new WorldState({
+        ecs,
         map,
         colonists,
         buildQueue,
-        foods,
-        beds,
-        buildings: [],
       })
       for (const c of this.state.colonists) {
         this.occupyTile(c.position.x, c.position.y, c.id)
@@ -93,9 +90,6 @@ export class GameWorld implements GameServer {
 
   get map(): GameMap { return this.state.map }
   get colonists(): Colonist[] { return this.state.colonists }
-  get foods(): Food[] { return this.state.foods }
-  get beds(): Bed[] { return this.state.beds }
-  get buildings(): Building[] { return this.state.buildings }
   get buildQueue(): BuildQueue { return this.state.buildQueue }
 
   create(): ClientSnapshot {
@@ -111,7 +105,7 @@ export class GameWorld implements GameServer {
   }
 
   save(): SaveData {
-    return WorldSerializer.toJSON(this, this.pipeline.serialize())
+    return WorldSerializer.toJSON(this, this.state.ecs, this.pipeline.serialize())
   }
 
   private generateSnapshot(): ClientSnapshot {
@@ -138,9 +132,9 @@ export class GameWorld implements GameServer {
         statuses: [...c.statuses],
         state: serializeState(c.state),
       })),
-      foods: this.state.foods.map(f => ({ id: f.id, x: f.x, y: f.y })),
-      beds: this.state.beds.map(b => ({ id: b.id, x: b.x, y: b.y })),
-      buildings: this.state.buildings.map(b => ({ id: b.id, x: b.x, y: b.y })),
+      foods: Array.from(query(this.state.ecs, [Edible, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
+      beds: Array.from(query(this.state.ecs, [Sleepable, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
+      buildings: Array.from(query(this.state.ecs, [Solid, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
       buildQueue: this.state.buildQueue.all.map(t => ({ id: t.id, type: t.type, x: t.x, y: t.y })),
     }
   }
@@ -172,24 +166,34 @@ export class GameWorld implements GameServer {
     }
   }
 
-  private placeInitialFood(map: GameMap): Food[] {
+  private placeInitialFood(ecs: World, map: GameMap): void {
     const positions: Vec2[] = [
       { x: 8, y: 8 }, { x: 12, y: 8 }, { x: 8, y: 12 }, { x: 12, y: 12 }, { x: 10, y: 10 },
     ]
-    return positions.map((p, i) => {
+    for (const p of positions) {
+      const eid = addEntity(ecs)
+      Position.x[eid] = p.x; Position.y[eid] = p.y
+      addComponent(ecs, eid, Edible)
+      addComponent(ecs, eid, Position)
+      addComponent(ecs, eid, Renderable)
+      Renderable[eid] = { type: 'food', color: '#d44040' }
       map.setTile(p.x, p.y, TileType.Food)
-      return new Food(`food-${i}`, p.x, p.y)
-    })
+    }
   }
 
-  private placeInitialBeds(map: GameMap): Bed[] {
+  private placeInitialBeds(ecs: World, map: GameMap): void {
     const positions: Vec2[] = [
       { x: 6, y: 6 }, { x: 14, y: 14 },
     ]
-    return positions.map((p, i) => {
+    for (const p of positions) {
+      const eid = addEntity(ecs)
+      Position.x[eid] = p.x; Position.y[eid] = p.y
+      addComponent(ecs, eid, Sleepable)
+      addComponent(ecs, eid, Position)
+      addComponent(ecs, eid, Renderable)
+      Renderable[eid] = { type: 'bed', color: '#c49a6c' }
       map.setTile(p.x, p.y, TileType.Bed)
-      return new Bed(`bed-${i}`, p.x, p.y)
-    })
+    }
   }
 
   private buildTaskCounter = 0
@@ -211,9 +215,10 @@ export class GameWorld implements GameServer {
   private canBuildAt(x: number, y: number): boolean {
     const tile = this.state.map.tileAt(x, y)
     if (tile.type === TileType.Rock || tile.type === TileType.Water) return false
-    if (this.state.foods.some(f => f.x === x && f.y === y)) return false
-    if (this.state.beds.some(b => b.x === x && b.y === y)) return false
-    if (this.state.buildings.some(b => b.x === x && b.y === y)) return false
+    const ecs = this.state.ecs
+    for (const eid of query(ecs, [Edible, Position])) { if (Position.x[eid] === x && Position.y[eid] === y) return false }
+    for (const eid of query(ecs, [Sleepable, Position])) { if (Position.x[eid] === x && Position.y[eid] === y) return false }
+    for (const eid of query(ecs, [Solid, Position])) { if (Position.x[eid] === x && Position.y[eid] === y) return false }
     return true
   }
 
@@ -284,10 +289,8 @@ export class GameWorld implements GameServer {
   }
 
   update(dt: number): ClientSnapshot {
-    // 1. Tick-based systems
     this.pipeline.update(dt, this.state)
 
-    // 2. Colonist FSM + event-driven dispatch
     for (const colonist of this.state.colonists) {
       const s = colonist.state
       colonist.update(dt, this.state.map)
@@ -320,7 +323,6 @@ export class GameWorld implements GameServer {
       }
     }
 
-    // 3. Idle colonists
     for (const colonist of this.state.colonists) {
       if (colonist.state.phase === 'idle') {
         this.jobDispatcher.assignBestJob(colonist.id, this.state)

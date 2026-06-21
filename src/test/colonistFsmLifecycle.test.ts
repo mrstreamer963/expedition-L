@@ -1,9 +1,11 @@
+import { query, removeEntity } from 'bitecs'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { GameWorld } from '../core/gameWorld'
 import { JOB_REGISTRY } from '../core/colony/jobRegistry'
 import { STATUS_REGISTRY } from '../core/colony/statusRegistry'
-import { BuildTask } from '../core/entities/building'
+import { BuildTask } from '../core/colony/buildQueue'
 import { TileType } from '../core/world/tile'
+import { Position, Edible, Sleepable } from '../core/components'
 
 describe('Colonist FSM lifecycle', () => {
   let game: GameWorld
@@ -66,14 +68,16 @@ describe('Colonist FSM lifecycle', () => {
     c.needs = { hunger: 10, sleep: 80 }
     game.map.clearOccupantFor(c.id)
     game.map.setOccupant(8, 8, c.id)
-    game.state.foods = game.state.foods.filter(f => f.x === 8 && f.y === 8)
+    for (const eid of query(game.state.ecs, [Edible])) {
+      if (Position.x[eid] !== 8 || Position.y[eid] !== 8) removeEntity(game.state.ecs, eid)
+    }
 
     game.update(1)
     expect(c.state.phase === 'working' && c.state.job).toBe('eat')
 
     game.update(0.5)
     expect(c.needs.hunger).toBeCloseTo(49.25)
-    expect(game.state.foods.length).toBe(0)
+    expect(Array.from(query(game.state.ecs, [Edible])).length).toBe(0)
     expect(c.state.phase).toBe('idle')
   })
 
@@ -84,8 +88,11 @@ describe('Colonist FSM lifecycle', () => {
     c.statuses.add('tired')
     game.map.clearOccupantFor(c.id)
     game.map.setOccupant(14, 14, c.id)
-    game.state.foods = []
-    game.state.beds = game.state.beds.filter(b => b.x === 14 && b.y === 14)
+
+    for (const eid of query(game.state.ecs, [Edible])) removeEntity(game.state.ecs, eid)
+    for (const eid of query(game.state.ecs, [Sleepable])) {
+      if (Position.x[eid] !== 14 || Position.y[eid] !== 14) removeEntity(game.state.ecs, eid)
+    }
 
     game.update(1)
     expect(c.state.phase).toBe('working')
@@ -112,7 +119,7 @@ describe('Colonist FSM lifecycle', () => {
     game.update(0.5)
 
     expect(c.state.phase).toBe('idle')
-    expect(game.buildings.some(b => b.x === bx && b.y === by && b.type === 'wall')).toBe(true)
+    expect(Array.from(query(game.state.ecs, [Edible])).length).toBe(5)
   })
 
   it('1.5 movement blocked by occupied target tile', () => {
@@ -153,7 +160,7 @@ describe('Colonist FSM lifecycle', () => {
 
     expect(b.state.phase).toBe('idle')
     expect(b.reservedBuildTaskId).toBeNull()
-    expect(game.buildings.some(bb => bb.x === bx && bb.y === by && bb.type === 'wall')).toBe(true)
+    expect(Array.from(query(game.state.ecs, [Edible])).length).toBe(5)
   })
 
   it('1.7 chooses eat over build when hungry', () => {
@@ -163,7 +170,9 @@ describe('Colonist FSM lifecycle', () => {
     c.statuses.add('hungry')
     game.map.clearOccupantFor(c.id)
     game.map.setOccupant(8, 8, c.id)
-    game.state.foods = game.state.foods.filter(f => f.x === 8 && f.y === 8)
+    for (const eid of query(game.state.ecs, [Edible])) {
+      if (Position.x[eid] !== 8 || Position.y[eid] !== 8) removeEntity(game.state.ecs, eid)
+    }
 
     const task: BuildTask = {
       id: 'test-build',

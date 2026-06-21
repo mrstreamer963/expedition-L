@@ -1,10 +1,10 @@
+import { World, createWorld, addEntity, addComponent, query } from 'bitecs'
 import { GameMap } from './world/map'
 import { TileType, Tile } from './world/tile'
 import { Colonist } from './colony/colonist'
 import { ColonistState } from './colony/types'
-import { Food } from './entities/food'
-import { Bed } from './entities/bed'
-import { Building, BuildingType, BuildQueue, BuildTask } from './entities/building'
+import { BuildingType, BuildQueue, BuildTask } from './colony/buildQueue'
+import { Position, Renderable, Edible, Sleepable, Solid } from './components'
 
 export interface SerializableTile {
   type: TileType
@@ -55,11 +55,9 @@ export interface SaveData {
 }
 
 export interface GameWorldInit {
+  ecs: World
   map: GameMap
   colonists: Colonist[]
-  foods: Food[]
-  beds: Bed[]
-  buildings: Building[]
   buildQueue: BuildQueue
   speed: number
 }
@@ -67,26 +65,23 @@ export interface GameWorldInit {
 export interface SerializableWorld {
   map: { toJSON(): { tiles: SerializableTile[][] }; tileAt(x: number, y: number): Tile }
   colonists: { toJSON(): SerializableColonist }[]
-  foods: { toJSON(): SerializableFood }[]
-  beds: { toJSON(): SerializableBed }[]
-  buildings: { toJSON(): SerializableBuilding }[]
   buildQueue: { toJSON(): { tasks: BuildTask[] }; all: BuildTask[] }
   speed: number
 }
 
-const CURRENT_VERSION = 3
+const CURRENT_VERSION = 4
 
 export class WorldSerializer {
-  static toJSON(world: SerializableWorld, systemData?: Record<string, unknown>): SaveData {
+  static toJSON(world: SerializableWorld, ecs: World, systemData?: Record<string, unknown>): SaveData {
     return {
       version: CURRENT_VERSION,
       timestamp: Date.now(),
       gameName: 'expedition-l',
       map: world.map.toJSON(),
       colonists: world.colonists.map(c => c.toJSON()),
-      foods: world.foods.map(f => f.toJSON()),
-      beds: world.beds.map(b => b.toJSON()),
-      buildings: world.buildings.map(b => b.toJSON()),
+      foods: Array.from(query(ecs, [Edible, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
+      beds: Array.from(query(ecs, [Sleepable, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
+      buildings: Array.from(query(ecs, [Solid, Position])).map(eid => ({ id: `e${eid}`, type: (Renderable[eid]?.type ?? 'wall') as BuildingType, x: Position.x[eid], y: Position.y[eid] })),
       buildQueue: world.buildQueue.toJSON(),
       speed: world.speed,
       systemData,
@@ -97,7 +92,7 @@ export class WorldSerializer {
     if (!data || typeof data !== 'object') return false
     const d = data as Record<string, unknown>
     const version = d.version as number
-    if (version !== 1 && version !== 2 && version !== 3) return false
+    if (version !== 1 && version !== 2 && version !== 3 && version !== 4) return false
     if (d.gameName !== 'expedition-l') return false
     if (!d.map || !d.colonists || !d.foods || !d.beds || !d.buildings) return false
     if (!d.buildQueue || d.speed === undefined) return false
@@ -121,15 +116,40 @@ export class WorldSerializer {
     )
 
     const colonists = data.colonists.map(c => Colonist.fromJSON(c))
-    const foods = data.foods.map(f => new Food(f.id, f.x, f.y))
-    const beds = data.beds.map(b => new Bed(b.id, b.x, b.y))
-    const buildings = data.buildings.map(b => new Building(b.id, b.type, b.x, b.y))
+
+    const ecs = createWorld()
+    for (const f of data.foods) {
+      const eid = addEntity(ecs)
+      Position.x[eid] = f.x; Position.y[eid] = f.y
+      addComponent(ecs, eid, Position)
+      addComponent(ecs, eid, Edible)
+      addComponent(ecs, eid, Renderable)
+      Renderable[eid] = { type: 'food', color: '#d44040' }
+    }
+    for (const b of data.beds) {
+      const eid = addEntity(ecs)
+      Position.x[eid] = b.x; Position.y[eid] = b.y
+      addComponent(ecs, eid, Position)
+      addComponent(ecs, eid, Sleepable)
+      addComponent(ecs, eid, Renderable)
+      Renderable[eid] = { type: 'bed', color: '#c49a6c' }
+    }
+    for (const b of data.buildings) {
+      const eid = addEntity(ecs)
+      Position.x[eid] = b.x; Position.y[eid] = b.y
+      addComponent(ecs, eid, Position)
+      addComponent(ecs, eid, Solid)
+      addComponent(ecs, eid, Renderable)
+      Renderable[eid] = { type: b.type, color: '#888' }
+    }
 
     const buildQueue = new BuildQueue()
     for (const task of data.buildQueue.tasks) {
       buildQueue.add({ ...task, reservedBy: null })
     }
 
-    return { map, colonists, foods, beds, buildings, buildQueue, speed: data.speed }
+    return { ecs, map, colonists, buildQueue, speed: data.speed }
   }
 }
+
+

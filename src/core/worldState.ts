@@ -1,31 +1,23 @@
+import { World } from 'bitecs'
 import { GameMap } from './world/map'
 import { Colonist } from './colony/colonist'
-import { BuildQueue } from './entities/building'
-import { Food } from './entities/food'
-import { Bed } from './entities/bed'
-import { Building } from './entities/building'
+import { BuildQueue } from './colony/buildQueue'
 
 export class WorldState {
+  ecs: World
   map: GameMap
   colonists: Colonist[]
   buildQueue: BuildQueue
-  foods: Food[]
-  beds: Bed[]
-  buildings: Building[]
 
   constructor(init: {
+    ecs: World
     map: GameMap
     colonists: Colonist[]
     buildQueue: BuildQueue
-    foods: Food[]
-    beds: Bed[]
-    buildings: Building[]
   }) {
+    this.ecs = init.ecs
     this.map = init.map
     this.colonists = init.colonists
     this.buildQueue = init.buildQueue
-    this.foods = init.foods
-    this.beds = init.beds
-    this.buildings = init.buildings
   }
 }

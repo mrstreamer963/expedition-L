@@ -6,16 +6,15 @@ import { hungryStatus } from '../core/colony/statuses/hungry'
 import { tiredStatus } from '../core/colony/statuses/tired'
 import { WorldState } from '../core/worldState'
 import { GameMap } from '../core/world/map'
-import { BuildQueue } from '../core/entities/building'
+import { createWorld } from 'bitecs'
+import { BuildQueue } from '../core/colony/buildQueue'
 
 function createState(colonists: Colonist[]): WorldState {
   return new WorldState({
+    ecs: createWorld(),
     map: new GameMap(),
     colonists,
     buildQueue: new BuildQueue(),
-    foods: [],
-    beds: [],
-    buildings: [],
   })
 }
 

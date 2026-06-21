@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { GameWorld } from '../core/gameWorld'
+import { addEntity, addComponent, query, removeEntity } from 'bitecs'
 import { JOB_REGISTRY } from '../core/colony/jobRegistry'
 import { STATUS_REGISTRY } from '../core/colony/statusRegistry'
-import { Food } from '../core/entities/food'
-import { Bed } from '../core/entities/bed'
+import { Position, Edible, Sleepable } from '../core/components'
 import * as pathfinding from '../core/world/pathfinding'
 
 describe('GameWorld speed controls', () => {
@@ -116,7 +116,7 @@ describe('JobDispatcher status-driven job selection', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 0, sleep: 0 }
-    game.state.foods = []
+    for (const eid of query(game.state.ecs, [Edible])) removeEntity(game.state.ecs, eid)
     c.statuses.add('hungry')
     c.statuses.add('tired')
     assignJob(c.id)
@@ -127,7 +127,7 @@ describe('JobDispatcher status-driven job selection', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
-    game.state.beds = []
+    for (const eid of query(game.state.ecs, [Sleepable])) removeEntity(game.state.ecs, eid)
     c.statuses.add('hungry')
     c.statuses.add('tired')
     assignJob(c.id)
@@ -151,7 +151,7 @@ describe('JobDispatcher status-driven job selection', () => {
     c.needs = { hunger: 50, sleep: 20 }
     c.statuses.add('tired')
     game.colonists[1].position = { x: 6, y: 6 }
-    game.state.foods = []
+    for (const eid of query(game.state.ecs, [Edible])) removeEntity(game.state.ecs, eid)
     const mock = vi.spyOn(pathfinding, 'findPath').mockReturnValue([{ x: 14, y: 14 }])
     assignJob(c.id)
     mock.mockRestore()
@@ -246,7 +246,7 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 80, sleep: 20 }
     b.statuses.add('tired')
 
-    game.state.foods = []
+    for (const eid of query(game.state.ecs, [Edible])) removeEntity(game.state.ecs, eid)
     game.jobDispatcher.assignBestJob(b.id, game.state)
 
     expect(game.map.getOccupant(6, 6)).toBe(a.id)
@@ -268,8 +268,9 @@ describe('Colonist occupancy collision prevention', () => {
     a.statuses.add('hungry')
     b.statuses.add('hungry')
 
-    game.state.foods = game.state.foods.filter(f => f.x === 8 && f.y === 8)
-    game.state.beds = []
+    const ecs271 = game.state.ecs
+    for (const eid of query(ecs271, [Edible])) removeEntity(ecs271, eid)
+    for (const eid of query(ecs271, [Sleepable])) removeEntity(ecs271, eid)
     game.jobDispatcher.assignBestJob(b.id, game.state)
 
     expect(b.state.phase).toBe('idle')
@@ -282,11 +283,13 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 30, sleep: 80 }
     b.statuses.add('hungry')
 
-    game.state.foods = [
-      new Food('f1', 8, 5),
-      new Food('f2', 12, 5),
-    ]
-    game.state.beds = []
+    const ecs285 = game.state.ecs
+    for (const eid of query(ecs285, [Edible])) removeEntity(ecs285, eid)
+    const f1 = addEntity(ecs285)
+    Position.x[f1] = 8; Position.y[f1] = 5; addComponent(ecs285, f1, Position); addComponent(ecs285, f1, Edible)
+    const f2 = addEntity(ecs285)
+    Position.x[f2] = 12; Position.y[f2] = 5; addComponent(ecs285, f2, Position); addComponent(ecs285, f2, Edible)
+    for (const eid of query(ecs285, [Sleepable])) removeEntity(ecs285, eid)
 
     const original = pathfinding.findPath
     const mock = vi.spyOn(pathfinding, 'findPath').mockImplementation((map, start, end, occupied) => {
@@ -311,11 +314,13 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 80, sleep: 20 }
     b.statuses.add('tired')
 
-    game.state.foods = []
-    game.state.beds = [
-      new Bed('bed1', 6, 6),
-      new Bed('bed2', 14, 14),
-    ]
+    const ecs317 = game.state.ecs
+    for (const eid of query(ecs317, [Edible])) removeEntity(ecs317, eid)
+    for (const eid of query(ecs317, [Sleepable])) removeEntity(ecs317, eid)
+    const bed1 = addEntity(ecs317)
+    Position.x[bed1] = 6; Position.y[bed1] = 6; addComponent(ecs317, bed1, Position); addComponent(ecs317, bed1, Sleepable)
+    const bed2 = addEntity(ecs317)
+    Position.x[bed2] = 14; Position.y[bed2] = 14; addComponent(ecs317, bed2, Position); addComponent(ecs317, bed2, Sleepable)
 
     const original = pathfinding.findPath
     const mock = vi.spyOn(pathfinding, 'findPath').mockImplementation((map, start, end, occupied) => {

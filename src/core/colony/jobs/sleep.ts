@@ -1,5 +1,7 @@
+import { query } from 'bitecs'
 import { JobDefinition, ColonistLike } from '../types'
 import { WorldState } from '../../worldState'
+import { Position, Sleepable } from '../../components'
 
 export const sleepJob: JobDefinition = {
   type: 'sleep',
@@ -17,9 +19,10 @@ export const sleepJob: JobDefinition = {
         .filter(c => c.id !== colonist.id && c.state.phase === 'working' && c.state.job === 'sleep')
         .map(c => `${Math.round(c.position.x)},${Math.round(c.position.y)}`)
     )
-    const beds = context.beds
-      .filter(b => !occupied.has(`${b.x},${b.y}`))
-      .map(b => ({ x: b.x, y: b.y }))
+    const { ecs } = context
+    const beds = Array.from(query(ecs, [Sleepable, Position]))
+      .filter(eid => !occupied.has(`${Position.x[eid]},${Position.y[eid]}`))
+      .map(eid => ({ x: Position.x[eid], y: Position.y[eid] }))
     const cx = colonist.position.x
     const cy = colonist.position.y
     beds.sort((a, b) =>
