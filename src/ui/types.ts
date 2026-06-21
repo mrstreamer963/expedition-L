@@ -1,4 +1,5 @@
 import { GameState } from '../store/types'
+import { BuildingType } from '../core/colony/buildingTypes'
 
 export interface UIState extends GameState {
   colonists: UIColonist[]
@@ -18,7 +19,7 @@ export interface UIColonist {
   statuses: string[]
 }
 
-export type BuildMode = 'none' | 'wall' | 'bed' | 'food'
+export type BuildMode = 'none' | BuildingType
 
 export const INITIAL_UI_STATE: UIState = {
   ...({} as GameState),

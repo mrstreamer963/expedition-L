@@ -1,4 +1,4 @@
-import { Tile, TileType } from './tile'
+import { Tile, TileType, TILE_BEHAVIOR } from './tile'
 
 export const MAP_WIDTH = 30
 export const MAP_HEIGHT = 20
@@ -40,7 +40,7 @@ export class GameMap {
 
   setTile(x: number, y: number, type: TileType): void {
     if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return
-    const walkable = type !== TileType.Wall && type !== TileType.Rock && type !== TileType.Water
+    const walkable = TILE_BEHAVIOR[type]?.walkable ?? true
     this.grid[y][x] = { type, walkable, occupantId: null }
   }
 

@@ -1,5 +1,6 @@
 import { Vec2 } from './colony/types'
 import { SaveData } from './worldSerializer'
+import { BuildingType } from './colony/buildingTypes'
 
 export type { SaveData, Vec2 }
 
@@ -15,7 +16,7 @@ export interface GameServer {
 
 export type PlayerAction =
   | { type: 'right-click'; x: number; y: number }
-  | { type: 'build'; x: number; y: number; buildingType: 'wall' | 'bed' | 'food' }
+  | { type: 'build'; x: number; y: number; buildingType: BuildingType }
 
 export interface ClientSnapshot {
   speed: number

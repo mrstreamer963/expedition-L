@@ -22,6 +22,7 @@ import { WorldSerializer, SaveData } from './worldSerializer'
 import { findPath } from './world/pathfinding'
 import { GameServer, ClientSnapshot, PlayerAction } from './types'
 import { Position, Renderable, Edible, Sleepable, Solid } from './components'
+import { BuildingType, BUILDING_CONFIGS } from './colony/buildingTypes'
 
 export class GameWorld implements GameServer {
   readonly state: WorldState
@@ -72,8 +73,12 @@ export class GameWorld implements GameServer {
       const map = new GameMap()
       const colonists = createInitialColonists()
       const buildQueue = new BuildQueue()
-      this.placeInitialFood(ecs, map)
-      this.placeInitialBeds(ecs, map)
+      this.placeInitialEntities(ecs, map, BuildingType.Food, [
+        { x: 8, y: 8 }, { x: 12, y: 8 }, { x: 8, y: 12 }, { x: 12, y: 12 }, { x: 10, y: 10 },
+      ])
+      this.placeInitialEntities(ecs, map, BuildingType.Bed, [
+        { x: 6, y: 6 }, { x: 14, y: 14 },
+      ])
       this.state = new WorldState({
         ecs,
         map,
@@ -166,39 +171,22 @@ export class GameWorld implements GameServer {
     }
   }
 
-  private placeInitialFood(ecs: World, map: GameMap): void {
-    const positions: Vec2[] = [
-      { x: 8, y: 8 }, { x: 12, y: 8 }, { x: 8, y: 12 }, { x: 12, y: 12 }, { x: 10, y: 10 },
-    ]
+  private placeInitialEntities(ecs: World, map: GameMap, type: BuildingType, positions: Vec2[]): void {
+    const config = BUILDING_CONFIGS[type]
     for (const p of positions) {
       const eid = addEntity(ecs)
       Position.x[eid] = p.x; Position.y[eid] = p.y
-      addComponent(ecs, eid, Edible)
+      addComponent(ecs, eid, config.component)
       addComponent(ecs, eid, Position)
       addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: 'food', color: '#d44040' }
-      map.setTile(p.x, p.y, TileType.Food)
-    }
-  }
-
-  private placeInitialBeds(ecs: World, map: GameMap): void {
-    const positions: Vec2[] = [
-      { x: 6, y: 6 }, { x: 14, y: 14 },
-    ]
-    for (const p of positions) {
-      const eid = addEntity(ecs)
-      Position.x[eid] = p.x; Position.y[eid] = p.y
-      addComponent(ecs, eid, Sleepable)
-      addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: 'bed', color: '#c49a6c' }
-      map.setTile(p.x, p.y, TileType.Bed)
+      Renderable[eid] = { type }
+      map.setTile(p.x, p.y, config.tileType)
     }
   }
 
   private buildTaskCounter = 0
 
-  addBuildTask(tileX: number, tileY: number, type: 'wall' | 'bed' | 'food'): void {
+  addBuildTask(tileX: number, tileY: number, type: BuildingType): void {
     if (!this.canBuildAt(tileX, tileY)) return
 
     const task: BuildTask = {

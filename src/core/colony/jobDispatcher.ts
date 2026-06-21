@@ -2,7 +2,6 @@ import { ColonistLike } from './types'
 import { JOB_REGISTRY } from './jobRegistry'
 import { STATUS_REGISTRY } from './statusRegistry'
 import { findPath } from '../world/pathfinding'
-import { Colonist } from './colonist'
 import { WorldState } from '../worldState'
 
 export class JobDispatcher {
@@ -48,7 +47,7 @@ export class JobDispatcher {
   private tryAssignBuild(colonist: ColonistLike, context: WorldState): boolean {
     const existing = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
     if (existing) {
-      ;(colonist as Colonist).reservedBuildTaskId = existing.id
+      colonist.reservedBuildTaskId = existing.id
       return this.sendTo(colonist, { x: existing.x, y: existing.y }, 'build', context)
     }
     const tasks = context.buildQueue.all
@@ -61,19 +60,19 @@ export class JobDispatcher {
     const task = tasks[0]
     if (!task) return false
     task.reservedBy = colonist.id
-    ;(colonist as Colonist).reservedBuildTaskId = task.id
+    colonist.reservedBuildTaskId = task.id
     return this.sendTo(colonist, { x: task.x, y: task.y }, 'build', context)
   }
 
-  private findIdleColonist(context: WorldState, x: number, y: number): Colonist | null {
-    let nearest: Colonist | null = null
+  private findIdleColonist(context: WorldState, x: number, y: number): ColonistLike | null {
+    let nearest: ColonistLike | null = null
     let minDist = Infinity
     for (const c of context.colonists) {
       if (c.state.phase !== 'idle') continue
       const dist = Math.abs(c.position.x - x) + Math.abs(c.position.y - y)
       if (dist < minDist) {
         minDist = dist
-        nearest = c as Colonist
+        nearest = c
       }
     }
     return nearest
@@ -101,7 +100,7 @@ export class JobDispatcher {
         this.cancelReservation(colonist, context)
         return false
       }
-      ;(colonist as Colonist).transition({
+      colonist.transition({
         phase: 'working',
         job: jobType,
         progress: 0,
@@ -119,7 +118,7 @@ export class JobDispatcher {
       return false
     }
     this.releaseTile(colonist, context)
-    ;(colonist as Colonist).transition({ phase: 'moving', job: jobType, path })
+    colonist.transition({ phase: 'moving', job: jobType, path })
     def.onStart(colonist, context)
     return true
   }
@@ -127,7 +126,7 @@ export class JobDispatcher {
   cancelReservation(colonist: ColonistLike, context: WorldState): void {
     const task = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
     if (task) task.reservedBy = null
-    ;(colonist as Colonist).reservedBuildTaskId = null
+    colonist.reservedBuildTaskId = null
   }
 
   private releaseTile(colonist: ColonistLike, context: WorldState): void {

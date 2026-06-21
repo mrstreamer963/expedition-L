@@ -1,3 +1,5 @@
+export { TILE_WIDTH, TILE_HEIGHT } from '../../geometry/tile'
+
 export interface TileData {
   color: string
   walkable: boolean
@@ -13,5 +15,3 @@ export const TILE_DATA: Record<string, TileData> = {
   Food: { color: '#e8d44d', walkable: true, pattern: 'dot' },
 }
 
-export const TILE_WIDTH = 48
-export const TILE_HEIGHT = 24

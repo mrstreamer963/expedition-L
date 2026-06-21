@@ -3,7 +3,8 @@ import { GameMap } from './world/map'
 import { TileType, Tile } from './world/tile'
 import { Colonist } from './colony/colonist'
 import { ColonistState } from './colony/types'
-import { BuildingType, BuildQueue, BuildTask } from './colony/buildQueue'
+import { BuildQueue, BuildTask } from './colony/buildQueue'
+import { BuildingType, BUILDING_CONFIGS } from './colony/buildingTypes'
 import { Position, Renderable, Edible, Sleepable, Solid } from './components'
 
 export interface SerializableTile {
@@ -81,7 +82,7 @@ export class WorldSerializer {
       colonists: world.colonists.map(c => c.toJSON()),
       foods: Array.from(query(ecs, [Edible, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
       beds: Array.from(query(ecs, [Sleepable, Position])).map(eid => ({ id: `e${eid}`, x: Position.x[eid], y: Position.y[eid] })),
-      buildings: Array.from(query(ecs, [Solid, Position])).map(eid => ({ id: `e${eid}`, type: (Renderable[eid]?.type ?? 'wall') as BuildingType, x: Position.x[eid], y: Position.y[eid] })),
+      buildings: Array.from(query(ecs, [Solid, Position])).map(eid => ({ id: `e${eid}`, type: (Renderable[eid]?.type ?? BuildingType.Wall) as BuildingType, x: Position.x[eid], y: Position.y[eid] })),
       buildQueue: world.buildQueue.toJSON(),
       speed: world.speed,
       systemData,
@@ -122,25 +123,28 @@ export class WorldSerializer {
       const eid = addEntity(ecs)
       Position.x[eid] = f.x; Position.y[eid] = f.y
       addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Edible)
       addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: 'food', color: '#d44040' }
+      Renderable[eid] = { type: BuildingType.Food }
+      const config = BUILDING_CONFIGS[BuildingType.Food]
+      if (config) addComponent(ecs, eid, config.component)
     }
     for (const b of data.beds) {
       const eid = addEntity(ecs)
       Position.x[eid] = b.x; Position.y[eid] = b.y
       addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Sleepable)
       addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: 'bed', color: '#c49a6c' }
+      Renderable[eid] = { type: BuildingType.Bed }
+      const config = BUILDING_CONFIGS[BuildingType.Bed]
+      if (config) addComponent(ecs, eid, config.component)
     }
     for (const b of data.buildings) {
       const eid = addEntity(ecs)
       Position.x[eid] = b.x; Position.y[eid] = b.y
       addComponent(ecs, eid, Position)
-      addComponent(ecs, eid, Solid)
       addComponent(ecs, eid, Renderable)
-      Renderable[eid] = { type: b.type, color: '#888' }
+      Renderable[eid] = { type: b.type }
+      const config = BUILDING_CONFIGS[b.type]
+      if (config) addComponent(ecs, eid, config.component)
     }
 
     const buildQueue = new BuildQueue()

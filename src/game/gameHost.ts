@@ -1,5 +1,5 @@
 import { Camera } from '../geometry/camera'
-import { createGameServer, GameServer, ClientSnapshot, SaveData } from '../core'
+import { createGameServer, GameServer, ClientSnapshot, SaveData, BuildingType } from '../core'
 import { GameLoop } from './gameLoop'
 import { InputHandler } from './input/inputHandler'
 import { renderWorld, RenderContext } from '../render'
@@ -75,7 +75,7 @@ export class GameHost {
       if (this.buildMode !== 'none') {
         this.lastSnapshot = this.server.handleAction({
           type: 'build', x: tileX, y: tileY,
-          buildingType: this.buildMode as 'wall' | 'bed' | 'food',
+          buildingType: this.buildMode as BuildingType,
         })
         this.emitUIUpdate()
         return

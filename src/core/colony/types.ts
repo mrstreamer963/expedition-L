@@ -38,6 +38,8 @@ export interface ColonistLike {
   needs: ColonistNeeds
   state: ColonistState
   statuses: Set<ColonistStatus>
+  reservedBuildTaskId?: string | null
+  transition(state: ColonistState): void
 }
 
 export interface JobDefinition<C = WorldState> {

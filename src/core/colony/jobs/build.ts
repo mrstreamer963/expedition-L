@@ -1,12 +1,8 @@
 import { addEntity, addComponent } from 'bitecs'
 import { JobDefinition, ColonistLike } from '../types'
 import { WorldState } from '../../worldState'
-import { TileType } from '../../world/tile'
-import { Position, Renderable, Edible, Sleepable, Solid } from '../../components'
-
-interface ColonistWithBuildTask extends ColonistLike {
-  reservedBuildTaskId: string | null
-}
+import { Position, Renderable } from '../../components'
+import { BUILDING_CONFIGS } from '../buildingTypes'
 
 export const buildJob: JobDefinition = {
   type: 'build',
@@ -30,6 +26,8 @@ export const buildJob: JobDefinition = {
     if (!taskId) return
     const task = buildQueue.removeById(taskId)
     if (!task) return
+    const config = BUILDING_CONFIGS[task.type]
+    if (!config) return
     const tx = Math.round(colonist.position.x)
     const ty = Math.round(colonist.position.y)
 
@@ -37,25 +35,11 @@ export const buildJob: JobDefinition = {
     Position.x[eid] = tx; Position.y[eid] = ty
     addComponent(ecs, eid, Position)
     addComponent(ecs, eid, Renderable)
+    addComponent(ecs, eid, config.component)
+    Renderable[eid] = { type: task.type }
+    map.setTile(tx, ty, config.tileType)
 
-    switch (task.type) {
-      case 'wall':
-        addComponent(ecs, eid, Solid)
-        Renderable[eid] = { type: 'wall', color: '#888' }
-        map.setTile(tx, ty, TileType.Wall)
-        break
-      case 'bed':
-        addComponent(ecs, eid, Sleepable)
-        Renderable[eid] = { type: 'bed', color: '#c49a6c' }
-        map.setTile(tx, ty, TileType.Bed)
-        break
-      case 'food':
-        addComponent(ecs, eid, Edible)
-        Renderable[eid] = { type: 'food', color: '#d44040' }
-        map.setTile(tx, ty, TileType.Food)
-        break
-    }
-    ;(colonist as ColonistWithBuildTask).reservedBuildTaskId = null
+    colonist.reservedBuildTaskId = null
   },
 
   onCancel(colonist: ColonistLike, context: WorldState): void {
@@ -71,8 +55,7 @@ export const buildJob: JobDefinition = {
 }
 
 function resolveTaskId(colonist: ColonistLike, context: WorldState): string | undefined {
-  const c = colonist as ColonistWithBuildTask
-  if (c.reservedBuildTaskId) return c.reservedBuildTaskId
+  if (colonist.reservedBuildTaskId) return colonist.reservedBuildTaskId
   const task = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
   return task?.id
 }

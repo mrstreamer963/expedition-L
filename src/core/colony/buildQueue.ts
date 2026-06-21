@@ -1,4 +1,4 @@
-export type BuildingType = 'wall' | 'bed' | 'food'
+import { BuildingType } from './buildingTypes'
 
 export interface BuildTask {
   id: string

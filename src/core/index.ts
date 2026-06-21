@@ -5,6 +5,7 @@ export type { GameServer, ClientSnapshot, PlayerAction, SaveData } from './types
 export type { GameSystem } from './systems/types'
 export { SystemPipeline } from './systems/systemPipeline'
 export { WorldState } from './worldState'
+export { BuildingType } from './colony/buildingTypes'
 
 export function createGameServer(savedState?: SaveData): GameServer {
   return new GameWorld(savedState)
