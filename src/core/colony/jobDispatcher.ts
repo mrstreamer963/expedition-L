@@ -1,11 +1,12 @@
-import { JobContext, ColonistLike } from './types'
+import { ColonistLike } from './types'
 import { JOB_REGISTRY } from './jobRegistry'
 import { STATUS_REGISTRY } from './statusRegistry'
 import { findPath } from '../world/pathfinding'
 import { Colonist } from './colonist'
+import { WorldState } from '../worldState'
 
 export class JobDispatcher {
-  assignBestJob(colonistId: string, context: JobContext): void {
+  assignBestJob(colonistId: string, context: WorldState): void {
     const colonist = context.colonists.find(c => c.id === colonistId)
     if (!colonist || colonist.state.phase !== 'idle') return
 
@@ -22,7 +23,7 @@ export class JobDispatcher {
 
   onBuildQueued(
     task: { id: string; type: string; x: number; y: number; reservedBy: string | null },
-    context: JobContext
+    context: WorldState
   ): void {
     const idle = this.findIdleColonist(context, task.x, task.y)
     if (!idle) return
@@ -31,7 +32,7 @@ export class JobDispatcher {
     this.sendTo(idle, { x: task.x, y: task.y }, 'build', context)
   }
 
-  private tryAssignJob(colonist: ColonistLike, jobType: string, context: JobContext): boolean {
+  private tryAssignJob(colonist: ColonistLike, jobType: string, context: WorldState): boolean {
     const def = JOB_REGISTRY.get(jobType)
     if (!def) return false
     const targets = def.findAllTargets?.(colonist, context) ?? (() => {
@@ -44,7 +45,7 @@ export class JobDispatcher {
     return false
   }
 
-  private tryAssignBuild(colonist: ColonistLike, context: JobContext): boolean {
+  private tryAssignBuild(colonist: ColonistLike, context: WorldState): boolean {
     const existing = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
     if (existing) {
       ;(colonist as Colonist).reservedBuildTaskId = existing.id
@@ -64,7 +65,7 @@ export class JobDispatcher {
     return this.sendTo(colonist, { x: task.x, y: task.y }, 'build', context)
   }
 
-  private findIdleColonist(context: JobContext, x: number, y: number): Colonist | null {
+  private findIdleColonist(context: WorldState, x: number, y: number): Colonist | null {
     let nearest: Colonist | null = null
     let minDist = Infinity
     for (const c of context.colonists) {
@@ -82,7 +83,7 @@ export class JobDispatcher {
     colonist: ColonistLike,
     target: { x: number; y: number },
     jobType: string,
-    context: JobContext
+    context: WorldState
   ): boolean {
     const def = JOB_REGISTRY.get(jobType)
     if (!def) return false
@@ -123,13 +124,13 @@ export class JobDispatcher {
     return true
   }
 
-  cancelReservation(colonist: ColonistLike, context: JobContext): void {
+  cancelReservation(colonist: ColonistLike, context: WorldState): void {
     const task = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
     if (task) task.reservedBy = null
     ;(colonist as Colonist).reservedBuildTaskId = null
   }
 
-  private releaseTile(colonist: ColonistLike, context: JobContext): void {
+  private releaseTile(colonist: ColonistLike, context: WorldState): void {
     const map = context.map
     const tx = Math.round(colonist.position.x)
     const ty = Math.round(colonist.position.y)

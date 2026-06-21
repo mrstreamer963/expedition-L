@@ -1,5 +1,4 @@
-import { BuildQueue, BuildingType } from '../entities/building'
-import { GameMap } from '../world/map'
+import { WorldState } from '../worldState'
 
 export interface Vec2 {
   x: number
@@ -33,15 +32,6 @@ export type ColonistState =
   | { phase: 'working';  job: string; progress: number; duration: number }
   | { phase: 'done';     job: string }
 
-export interface JobContext {
-  map: GameMap
-  colonists: ColonistLike[]
-  foods: { id: string; x: number; y: number }[]
-  beds: { id: string; x: number; y: number }[]
-  buildings: { id: string; type: BuildingType; x: number; y: number }[]
-  buildQueue: BuildQueue
-}
-
 export interface ColonistLike {
   id: string
   position: Vec2
@@ -50,7 +40,7 @@ export interface ColonistLike {
   statuses: Set<ColonistStatus>
 }
 
-export interface JobDefinition<C = JobContext> {
+export interface JobDefinition<C = WorldState> {
   type: string
   label: string
   duration: number

@@ -1,16 +1,17 @@
-import { JobDefinition, JobContext, ColonistLike } from '../types'
+import { JobDefinition, ColonistLike } from '../types'
+import { WorldState } from '../../worldState'
 
 export const eatJob: JobDefinition = {
   type: 'eat',
   label: 'Еда',
   duration: 0.5,
 
-  findTarget(colonist: ColonistLike, context: JobContext): { x: number; y: number } | null {
+  findTarget(colonist: ColonistLike, context: WorldState): { x: number; y: number } | null {
     const all = this.findAllTargets!(colonist, context)
     return all.length > 0 ? all[0] : null
   },
 
-  findAllTargets(colonist: ColonistLike, context: JobContext): { x: number; y: number }[] {
+  findAllTargets(colonist: ColonistLike, context: WorldState): { x: number; y: number }[] {
     const occupied = new Set(
       context.colonists
         .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
@@ -27,9 +28,9 @@ export const eatJob: JobDefinition = {
     return foods
   },
 
-  onStart(_colonist: ColonistLike, _context: JobContext): void {},
+  onStart(_colonist: ColonistLike, _context: WorldState): void {},
 
-  onComplete(colonist: ColonistLike, context: JobContext): void {
+  onComplete(colonist: ColonistLike, context: WorldState): void {
     const foods = context.foods
     const idx = foods.findIndex(f =>
       Math.round(f.x) === Math.round(colonist.position.x) &&
@@ -41,7 +42,7 @@ export const eatJob: JobDefinition = {
     }
   },
 
-  onCancel(_colonist: ColonistLike, _context: JobContext): void {},
+  onCancel(_colonist: ColonistLike, _context: WorldState): void {},
 
   onTick(_colonist: ColonistLike, _dt: number): void {},
 }

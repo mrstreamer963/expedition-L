@@ -11,32 +11,26 @@ import { buildJob } from './colony/jobs/build'
 import { walkJob } from './colony/jobs/walk'
 import { hungryStatus } from './colony/statuses/hungry'
 import { tiredStatus } from './colony/statuses/tired'
-import { JobContext, ColonistState } from './colony/types'
+import { ColonistState } from './colony/types'
 import { Food } from './entities/food'
 import { Bed } from './entities/bed'
 import { Building, BuildQueue, BuildTask } from './entities/building'
 import { NeedSystem } from './systems/needSystem'
 import { StatusSystem } from './systems/statusSystem'
+import { SystemPipeline } from './systems/systemPipeline'
+import { WorldState } from './worldState'
 import { WorldSerializer, SaveData } from './worldSerializer'
 import { findPath } from './world/pathfinding'
 import { GameServer, ClientSnapshot, PlayerAction } from './types'
 
 export class GameWorld implements GameServer {
-  map: GameMap
-  colonists: Colonist[]
-  jobDispatcher: JobDispatcher
-  buildQueue: BuildQueue
-
-  foods: Food[]
-  beds: Bed[]
-  buildings: Building[]
+  readonly state: WorldState
+  readonly jobDispatcher = new JobDispatcher()
+  readonly pipeline = new SystemPipeline()
 
   paused: boolean = false
   speed: number = 1
   timeScale: number = 1
-
-  private needSystem = new NeedSystem()
-  private statusSystem = new StatusSystem()
 
   constructor(savedState?: SaveData) {
     JOB_REGISTRY.register(eatJob)
@@ -46,39 +40,63 @@ export class GameWorld implements GameServer {
     STATUS_REGISTRY.register(hungryStatus)
     STATUS_REGISTRY.register(tiredStatus)
 
-    this.jobDispatcher = new JobDispatcher()
-    this.buildQueue = new BuildQueue()
+    this.pipeline.add(new NeedSystem())
+    this.pipeline.add(new StatusSystem())
 
     if (savedState) {
       const init = WorldSerializer.fromJSON(savedState)
-      this.map = init.map
-      this.colonists = init.colonists
-      this.foods = init.foods
-      this.beds = init.beds
-      this.buildings = init.buildings
-      this.buildQueue = init.buildQueue
+      this.state = new WorldState({
+        map: init.map,
+        colonists: init.colonists,
+        buildQueue: init.buildQueue,
+        foods: init.foods,
+        beds: init.beds,
+        buildings: init.buildings,
+      })
       this.speed = [0, 1, 2, 3].includes(init.speed) ? init.speed : 2
       this.timeScale = this.speed === 2 ? 5 : this.speed === 3 ? 10 : this.speed
       this.paused = this.speed === 0
-      for (let y = 0; y < this.map.height; y++) {
-        for (let x = 0; x < this.map.width; x++) {
-          this.map.setOccupant(x, y, null)
+
+      for (let y = 0; y < this.state.map.height; y++) {
+        for (let x = 0; x < this.state.map.width; x++) {
+          this.state.map.setOccupant(x, y, null)
         }
       }
-      for (const c of this.colonists) {
+      for (const c of this.state.colonists) {
         this.occupyTile(c.position.x, c.position.y, c.id)
+      }
+
+      if (savedState.systemData) {
+        this.pipeline.deserialize(savedState.systemData, this.state)
       }
     } else {
-      this.map = new GameMap()
-      this.colonists = createInitialColonists()
-      for (const c of this.colonists) {
+      const map = new GameMap()
+      const colonists = createInitialColonists()
+      const buildQueue = new BuildQueue()
+      const foods = this.placeInitialFood(map)
+      const beds = this.placeInitialBeds(map)
+      this.state = new WorldState({
+        map,
+        colonists,
+        buildQueue,
+        foods,
+        beds,
+        buildings: [],
+      })
+      for (const c of this.state.colonists) {
         this.occupyTile(c.position.x, c.position.y, c.id)
       }
-      this.foods = this.placeInitialFood()
-      this.beds = this.placeInitialBeds()
-      this.buildings = []
     }
+
+    this.pipeline.init(this.state)
   }
+
+  get map(): GameMap { return this.state.map }
+  get colonists(): Colonist[] { return this.state.colonists }
+  get foods(): Food[] { return this.state.foods }
+  get beds(): Bed[] { return this.state.beds }
+  get buildings(): Building[] { return this.state.buildings }
+  get buildQueue(): BuildQueue { return this.state.buildQueue }
 
   create(): ClientSnapshot {
     return this.generateSnapshot()
@@ -93,7 +111,7 @@ export class GameWorld implements GameServer {
   }
 
   save(): SaveData {
-    return WorldSerializer.toJSON(this)
+    return WorldSerializer.toJSON(this, this.pipeline.serialize())
   }
 
   private generateSnapshot(): ClientSnapshot {
@@ -102,16 +120,16 @@ export class GameWorld implements GameServer {
       timeScale: this.timeScale,
       paused: this.paused,
       map: {
-        width: this.map.width,
-        height: this.map.height,
-        tiles: Array.from({ length: this.map.height }, (_, y) =>
-          Array.from({ length: this.map.width }, (_, x) => {
-            const tile = this.map.tileAt(x, y)
+        width: this.state.map.width,
+        height: this.state.map.height,
+        tiles: Array.from({ length: this.state.map.height }, (_, y) =>
+          Array.from({ length: this.state.map.width }, (_, x) => {
+            const tile = this.state.map.tileAt(x, y)
             return { type: tile.type, occupant: tile.occupantId, walkable: tile.walkable }
           })
         ),
       },
-      colonists: this.colonists.map(c => ({
+      colonists: this.state.colonists.map(c => ({
         id: c.id,
         name: c.name,
         color: c.color,
@@ -120,10 +138,10 @@ export class GameWorld implements GameServer {
         statuses: [...c.statuses],
         state: serializeState(c.state),
       })),
-      foods: this.foods.map(f => ({ id: f.id, x: f.x, y: f.y })),
-      beds: this.beds.map(b => ({ id: b.id, x: b.x, y: b.y })),
-      buildings: this.buildings.map(b => ({ id: b.id, x: b.x, y: b.y })),
-      buildQueue: this.buildQueue.all.map(t => ({ id: t.id, type: t.type, x: t.x, y: t.y })),
+      foods: this.state.foods.map(f => ({ id: f.id, x: f.x, y: f.y })),
+      beds: this.state.beds.map(b => ({ id: b.id, x: b.x, y: b.y })),
+      buildings: this.state.buildings.map(b => ({ id: b.id, x: b.x, y: b.y })),
+      buildQueue: this.state.buildQueue.all.map(t => ({ id: t.id, type: t.type, x: t.x, y: t.y })),
     }
   }
 
@@ -139,37 +157,37 @@ export class GameWorld implements GameServer {
   private handleRightClick(x: number, y: number): void {
     const target = { x, y }
     const colonist = this.getNearestColonist(target)
-    if (colonist && this.map.isWalkable(x, y)) {
+    if (colonist && this.state.map.isWalkable(x, y)) {
       if (colonist.state.phase !== 'idle') {
         colonist.transition({ phase: 'idle' })
       }
       this.releaseTile(colonist.position.x, colonist.position.y, colonist.id)
-      const occupied = this.colonists
+      const occupied = this.state.colonists
         .filter(c => c.id !== colonist.id && c.state.phase !== 'moving')
         .map(c => ({ x: Math.round(c.position.x), y: Math.round(c.position.y) }))
-      const path = findPath(this.map, colonist.position, target, occupied)
+      const path = findPath(this.state.map, colonist.position, target, occupied)
       if (path.length > 0) {
         colonist.transition({ phase: 'moving', job: 'walk', path })
       }
     }
   }
 
-  private placeInitialFood(): Food[] {
+  private placeInitialFood(map: GameMap): Food[] {
     const positions: Vec2[] = [
       { x: 8, y: 8 }, { x: 12, y: 8 }, { x: 8, y: 12 }, { x: 12, y: 12 }, { x: 10, y: 10 },
     ]
     return positions.map((p, i) => {
-      this.map.setTile(p.x, p.y, TileType.Food)
+      map.setTile(p.x, p.y, TileType.Food)
       return new Food(`food-${i}`, p.x, p.y)
     })
   }
 
-  private placeInitialBeds(): Bed[] {
+  private placeInitialBeds(map: GameMap): Bed[] {
     const positions: Vec2[] = [
       { x: 6, y: 6 }, { x: 14, y: 14 },
     ]
     return positions.map((p, i) => {
-      this.map.setTile(p.x, p.y, TileType.Bed)
+      map.setTile(p.x, p.y, TileType.Bed)
       return new Bed(`bed-${i}`, p.x, p.y)
     })
   }
@@ -186,23 +204,23 @@ export class GameWorld implements GameServer {
       y: tileY,
       reservedBy: null,
     }
-    this.buildQueue.add(task)
-    this.jobDispatcher.onBuildQueued(task, this.getJobContext())
+    this.state.buildQueue.add(task)
+    this.jobDispatcher.onBuildQueued(task, this.state)
   }
 
   private canBuildAt(x: number, y: number): boolean {
-    const tile = this.map.tileAt(x, y)
+    const tile = this.state.map.tileAt(x, y)
     if (tile.type === TileType.Rock || tile.type === TileType.Water) return false
-    if (this.foods.some(f => f.x === x && f.y === y)) return false
-    if (this.beds.some(b => b.x === x && b.y === y)) return false
-    if (this.buildings.some(b => b.x === x && b.y === y)) return false
+    if (this.state.foods.some(f => f.x === x && f.y === y)) return false
+    if (this.state.beds.some(b => b.x === x && b.y === y)) return false
+    if (this.state.buildings.some(b => b.x === x && b.y === y)) return false
     return true
   }
 
   getNearestColonist(target: Vec2): Colonist | null {
     let nearest: Colonist | null = null
     let minDist = Infinity
-    for (const c of this.colonists) {
+    for (const c of this.state.colonists) {
       const dist = Math.abs(c.position.x - target.x) + Math.abs(c.position.y - target.y)
       if (dist < minDist) {
         minDist = dist
@@ -233,18 +251,18 @@ export class GameWorld implements GameServer {
   occupyTile(x: number, y: number, id: string): void {
     const tx = Math.round(x)
     const ty = Math.round(y)
-    const occ = this.map.getOccupant(tx, ty)
+    const occ = this.state.map.getOccupant(tx, ty)
     if (occ === null || occ === id) {
-      this.map.clearOccupantFor(id)
-      this.map.setOccupant(tx, ty, id)
+      this.state.map.clearOccupantFor(id)
+      this.state.map.setOccupant(tx, ty, id)
     }
   }
 
   releaseTile(x: number, y: number, id: string): void {
     const tx = Math.round(x)
     const ty = Math.round(y)
-    if (this.map.getOccupant(tx, ty) === id) {
-      this.map.setOccupant(tx, ty, null)
+    if (this.state.map.getOccupant(tx, ty) === id) {
+      this.state.map.setOccupant(tx, ty, null)
     }
   }
 
@@ -255,8 +273,8 @@ export class GameWorld implements GameServer {
           if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue
           const nx = x + dx
           const ny = y + dy
-          if (nx < 0 || nx >= this.map.width || ny < 0 || ny >= this.map.height) continue
-          if (this.map.isWalkable(nx, ny) && this.map.getOccupant(nx, ny) === null) {
+          if (nx < 0 || nx >= this.state.map.width || ny < 0 || ny >= this.state.map.height) continue
+          if (this.state.map.isWalkable(nx, ny) && this.state.map.getOccupant(nx, ny) === null) {
             return { x: nx, y: ny }
           }
         }
@@ -265,30 +283,21 @@ export class GameWorld implements GameServer {
     return null
   }
 
-  private getJobContext(): JobContext {
-    return {
-      map: this.map,
-      colonists: this.colonists,
-      foods: this.foods,
-      beds: this.beds,
-      buildings: this.buildings,
-      buildQueue: this.buildQueue,
-    }
-  }
-
   update(dt: number): ClientSnapshot {
-    const context = this.getJobContext()
+    // 1. Tick-based systems
+    this.pipeline.update(dt, this.state)
 
-    for (const colonist of this.colonists) {
+    // 2. Colonist FSM + event-driven dispatch
+    for (const colonist of this.state.colonists) {
       const s = colonist.state
-      colonist.update(dt, this.map)
+      colonist.update(dt, this.state.map)
       const sAfter = colonist.state
 
       if (s.phase !== 'done' && sAfter.phase === 'done') {
         const job = sAfter.job
         const def = JOB_REGISTRY.get(job)
         if (def) {
-          def.onComplete(colonist, context)
+          def.onComplete(colonist, this.state)
         }
         colonist.transition({ phase: 'idle' })
         if (job === 'sleep') {
@@ -304,19 +313,17 @@ export class GameWorld implements GameServer {
         } else {
           this.occupyTile(colonist.position.x, colonist.position.y, colonist.id)
         }
-        this.jobDispatcher.assignBestJob(colonist.id, context)
+        this.jobDispatcher.assignBestJob(colonist.id, this.state)
       } else if (sAfter.phase === 'idle' && s.phase === 'moving') {
-        this.jobDispatcher.cancelReservation(colonist, context)
-        this.jobDispatcher.assignBestJob(colonist.id, context)
+        this.jobDispatcher.cancelReservation(colonist, this.state)
+        this.jobDispatcher.assignBestJob(colonist.id, this.state)
       }
     }
 
-    this.needSystem.update(dt, this.colonists)
-    this.statusSystem.update(dt, this.colonists)
-
-    for (const colonist of this.colonists) {
+    // 3. Idle colonists
+    for (const colonist of this.state.colonists) {
       if (colonist.state.phase === 'idle') {
-        this.jobDispatcher.assignBestJob(colonist.id, context)
+        this.jobDispatcher.assignBestJob(colonist.id, this.state)
       }
     }
 
@@ -324,6 +331,7 @@ export class GameWorld implements GameServer {
   }
 
   destroy(): void {
+    this.pipeline.destroy()
     JOB_REGISTRY.clear()
     STATUS_REGISTRY.clear()
   }

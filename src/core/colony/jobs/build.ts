@@ -1,5 +1,8 @@
-import { JobDefinition, JobContext, ColonistLike } from '../types'
+import { JobDefinition, ColonistLike } from '../types'
+import { WorldState } from '../../worldState'
 import { Building } from '../../entities/building'
+import { Bed } from '../../entities/bed'
+import { Food } from '../../entities/food'
 import { TileType } from '../../world/tile'
 
 interface ColonistWithBuildTask extends ColonistLike {
@@ -11,7 +14,7 @@ export const buildJob: JobDefinition = {
   label: 'Стройка',
   duration: 0.5,
 
-  findTarget(colonist: ColonistLike, context: JobContext): { x: number; y: number } | null {
+  findTarget(colonist: ColonistLike, context: WorldState): { x: number; y: number } | null {
     const task = context.buildQueue.all.find(t => t.reservedBy === colonist.id)
     if (task) return { x: task.x, y: task.y }
     const firstUnreserved = context.buildQueue.all.find(t => t.reservedBy === null)
@@ -20,9 +23,9 @@ export const buildJob: JobDefinition = {
     return { x: firstUnreserved.x, y: firstUnreserved.y }
   },
 
-  onStart(_colonist: ColonistLike, _context: JobContext): void {},
+  onStart(_colonist: ColonistLike, _context: WorldState): void {},
 
-  onComplete(colonist: ColonistLike, context: JobContext): void {
+  onComplete(colonist: ColonistLike, context: WorldState): void {
     const { buildQueue, buildings, map, foods, beds } = context
     const taskId = resolveTaskId(colonist, context)
     if (!taskId) return
@@ -36,18 +39,18 @@ export const buildJob: JobDefinition = {
         map.setTile(tx, ty, TileType.Wall)
         break
       case 'bed':
-        beds.push({ id: task.id, x: tx, y: ty })
+        beds.push(new Bed(task.id, tx, ty))
         map.setTile(tx, ty, TileType.Bed)
         break
       case 'food':
-        foods.push({ id: task.id, x: tx, y: ty })
+        foods.push(new Food(task.id, tx, ty))
         map.setTile(tx, ty, TileType.Food)
         break
     }
     ;(colonist as ColonistWithBuildTask).reservedBuildTaskId = null
   },
 
-  onCancel(colonist: ColonistLike, context: JobContext): void {
+  onCancel(colonist: ColonistLike, context: WorldState): void {
     for (const task of context.buildQueue.all) {
       if (task.reservedBy === colonist.id) {
         task.reservedBy = null
@@ -59,7 +62,7 @@ export const buildJob: JobDefinition = {
   onTick(_colonist: ColonistLike, _dt: number): void {},
 }
 
-function resolveTaskId(colonist: ColonistLike, context: JobContext): string | undefined {
+function resolveTaskId(colonist: ColonistLike, context: WorldState): string | undefined {
   const c = colonist as ColonistWithBuildTask
   if (c.reservedBuildTaskId) return c.reservedBuildTaskId
   const task = context.buildQueue.all.find(t => t.reservedBy === colonist.id)

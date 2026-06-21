@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { GameWorld } from '../core/gameWorld'
+import { JOB_REGISTRY } from '../core/colony/jobRegistry'
+import { STATUS_REGISTRY } from '../core/colony/statusRegistry'
 import { BuildTask } from '../core/entities/building'
+import { TileType } from '../core/world/tile'
 
 describe('Colonist FSM lifecycle', () => {
   let game: GameWorld
 
   beforeEach(() => {
+    JOB_REGISTRY.clear()
+    STATUS_REGISTRY.clear()
     game = new GameWorld()
     for (const c of game.colonists) {
       c.needs = { hunger: 80, sleep: 80 }
@@ -61,14 +66,14 @@ describe('Colonist FSM lifecycle', () => {
     c.needs = { hunger: 10, sleep: 80 }
     game.map.clearOccupantFor(c.id)
     game.map.setOccupant(8, 8, c.id)
-    game.foods = game.foods.filter(f => f.x === 8 && f.y === 8)
+    game.state.foods = game.state.foods.filter(f => f.x === 8 && f.y === 8)
 
     game.update(1)
     expect(c.state.phase === 'working' && c.state.job).toBe('eat')
 
     game.update(0.5)
     expect(c.needs.hunger).toBeCloseTo(49.25)
-    expect(game.foods.length).toBe(0)
+    expect(game.state.foods.length).toBe(0)
     expect(c.state.phase).toBe('idle')
   })
 
@@ -79,8 +84,8 @@ describe('Colonist FSM lifecycle', () => {
     c.statuses.add('tired')
     game.map.clearOccupantFor(c.id)
     game.map.setOccupant(14, 14, c.id)
-    game.foods = []
-    game.beds = game.beds.filter(b => b.x === 14 && b.y === 14)
+    game.state.foods = []
+    game.state.beds = game.state.beds.filter(b => b.x === 14 && b.y === 14)
 
     game.update(1)
     expect(c.state.phase).toBe('working')
@@ -141,6 +146,7 @@ describe('Colonist FSM lifecycle', () => {
     const bx = Math.round(b.position.x) + 2
     const by = Math.round(b.position.y)
 
+    game.map.setTile(bx, by, TileType.Floor)
     game.addBuildTask(bx, by, 'wall')
     game.update(1)
     game.update(0.5)
@@ -157,7 +163,7 @@ describe('Colonist FSM lifecycle', () => {
     c.statuses.add('hungry')
     game.map.clearOccupantFor(c.id)
     game.map.setOccupant(8, 8, c.id)
-    game.foods = game.foods.filter(f => f.x === 8 && f.y === 8)
+    game.state.foods = game.state.foods.filter(f => f.x === 8 && f.y === 8)
 
     const task: BuildTask = {
       id: 'test-build',

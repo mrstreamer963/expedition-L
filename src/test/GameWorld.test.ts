@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { GameWorld } from '../core/gameWorld'
+import { JOB_REGISTRY } from '../core/colony/jobRegistry'
+import { STATUS_REGISTRY } from '../core/colony/statusRegistry'
 import { Food } from '../core/entities/food'
 import { Bed } from '../core/entities/bed'
 import * as pathfinding from '../core/world/pathfinding'
@@ -8,6 +10,8 @@ describe('GameWorld speed controls', () => {
   let game: GameWorld
 
   beforeEach(() => {
+    JOB_REGISTRY.clear()
+    STATUS_REGISTRY.clear()
     game = new GameWorld()
   })
 
@@ -57,15 +61,7 @@ describe('JobDispatcher status-driven job selection', () => {
   })
 
   function assignJob(colonistId: string): void {
-    const context = {
-      map: game.map,
-      colonists: game.colonists,
-      foods: game.foods,
-      beds: game.beds,
-      buildings: game.buildings,
-      buildQueue: game.buildQueue,
-    }
-    game.jobDispatcher.assignBestJob(colonistId, context)
+    game.jobDispatcher.assignBestJob(colonistId, game.state)
   }
 
   it('chooses eat when only hungry status is active', () => {
@@ -120,7 +116,7 @@ describe('JobDispatcher status-driven job selection', () => {
     const c = game.colonists[0]
     c.position = { x: 14, y: 14 }
     c.needs = { hunger: 0, sleep: 0 }
-    game.foods = []
+    game.state.foods = []
     c.statuses.add('hungry')
     c.statuses.add('tired')
     assignJob(c.id)
@@ -131,7 +127,7 @@ describe('JobDispatcher status-driven job selection', () => {
     const c = game.colonists[0]
     c.position = { x: 10, y: 10 }
     c.needs = { hunger: 0, sleep: 0 }
-    game.beds = []
+    game.state.beds = []
     c.statuses.add('hungry')
     c.statuses.add('tired')
     assignJob(c.id)
@@ -155,7 +151,7 @@ describe('JobDispatcher status-driven job selection', () => {
     c.needs = { hunger: 50, sleep: 20 }
     c.statuses.add('tired')
     game.colonists[1].position = { x: 6, y: 6 }
-    game.foods = []
+    game.state.foods = []
     const mock = vi.spyOn(pathfinding, 'findPath').mockReturnValue([{ x: 14, y: 14 }])
     assignJob(c.id)
     mock.mockRestore()
@@ -227,15 +223,7 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 30, sleep: 80 }
     b.statuses.add('hungry')
 
-    const context = {
-      map: game.map,
-      colonists: game.colonists,
-      foods: game.foods,
-      beds: game.beds,
-      buildings: game.buildings,
-      buildQueue: game.buildQueue,
-    }
-    game.jobDispatcher.assignBestJob(b.id, context)
+    game.jobDispatcher.assignBestJob(b.id, game.state)
 
     expect(b.state.phase).toBe('moving')
     if (b.state.phase === 'moving') {
@@ -258,15 +246,8 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 80, sleep: 20 }
     b.statuses.add('tired')
 
-    const context = {
-      map: game.map,
-      colonists: game.colonists,
-      foods: [],
-      beds: game.beds,
-      buildings: game.buildings,
-      buildQueue: game.buildQueue,
-    }
-    game.jobDispatcher.assignBestJob(b.id, context)
+    game.state.foods = []
+    game.jobDispatcher.assignBestJob(b.id, game.state)
 
     expect(game.map.getOccupant(6, 6)).toBe(a.id)
     expect(b.state.phase).not.toBe('working')
@@ -287,15 +268,9 @@ describe('Colonist occupancy collision prevention', () => {
     a.statuses.add('hungry')
     b.statuses.add('hungry')
 
-    const context = {
-      map: game.map,
-      colonists: game.colonists,
-      foods: game.foods.filter(f => f.x === 8 && f.y === 8),
-      beds: [],
-      buildings: game.buildings,
-      buildQueue: game.buildQueue,
-    }
-    game.jobDispatcher.assignBestJob(b.id, context)
+    game.state.foods = game.state.foods.filter(f => f.x === 8 && f.y === 8)
+    game.state.beds = []
+    game.jobDispatcher.assignBestJob(b.id, game.state)
 
     expect(b.state.phase).toBe('idle')
     expect(game.map.getOccupant(8, 8)).toBe(a.id)
@@ -307,11 +282,11 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 30, sleep: 80 }
     b.statuses.add('hungry')
 
-    game.foods = [
+    game.state.foods = [
       new Food('f1', 8, 5),
       new Food('f2', 12, 5),
     ]
-    game.beds = []
+    game.state.beds = []
 
     const original = pathfinding.findPath
     const mock = vi.spyOn(pathfinding, 'findPath').mockImplementation((map, start, end, occupied) => {
@@ -319,15 +294,7 @@ describe('Colonist occupancy collision prevention', () => {
       return original(map, start, end, occupied)
     })
 
-    const context = {
-      map: game.map,
-      colonists: game.colonists,
-      foods: game.foods,
-      beds: [],
-      buildings: game.buildings,
-      buildQueue: game.buildQueue,
-    }
-    game.jobDispatcher.assignBestJob(b.id, context)
+    game.jobDispatcher.assignBestJob(b.id, game.state)
 
     mock.mockRestore()
 
@@ -344,8 +311,8 @@ describe('Colonist occupancy collision prevention', () => {
     b.needs = { hunger: 80, sleep: 20 }
     b.statuses.add('tired')
 
-    game.foods = []
-    game.beds = [
+    game.state.foods = []
+    game.state.beds = [
       new Bed('bed1', 6, 6),
       new Bed('bed2', 14, 14),
     ]
@@ -356,15 +323,7 @@ describe('Colonist occupancy collision prevention', () => {
       return original(map, start, end, occupied)
     })
 
-    const context = {
-      map: game.map,
-      colonists: game.colonists,
-      foods: [],
-      beds: game.beds,
-      buildings: game.buildings,
-      buildQueue: game.buildQueue,
-    }
-    game.jobDispatcher.assignBestJob(b.id, context)
+    game.jobDispatcher.assignBestJob(b.id, game.state)
 
     mock.mockRestore()
 

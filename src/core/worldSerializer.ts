@@ -51,6 +51,7 @@ export interface SaveData {
   buildings: SerializableBuilding[]
   buildQueue: { tasks: BuildTask[] }
   speed: number
+  systemData?: Record<string, unknown>
 }
 
 export interface GameWorldInit {
@@ -73,10 +74,10 @@ export interface SerializableWorld {
   speed: number
 }
 
-const CURRENT_VERSION = 2
+const CURRENT_VERSION = 3
 
 export class WorldSerializer {
-  static toJSON(world: SerializableWorld): SaveData {
+  static toJSON(world: SerializableWorld, systemData?: Record<string, unknown>): SaveData {
     return {
       version: CURRENT_VERSION,
       timestamp: Date.now(),
@@ -88,6 +89,7 @@ export class WorldSerializer {
       buildings: world.buildings.map(b => b.toJSON()),
       buildQueue: world.buildQueue.toJSON(),
       speed: world.speed,
+      systemData,
     }
   }
 
@@ -95,7 +97,7 @@ export class WorldSerializer {
     if (!data || typeof data !== 'object') return false
     const d = data as Record<string, unknown>
     const version = d.version as number
-    if (version !== 1 && version !== 2) return false
+    if (version !== 1 && version !== 2 && version !== 3) return false
     if (d.gameName !== 'expedition-l') return false
     if (!d.map || !d.colonists || !d.foods || !d.beds || !d.buildings) return false
     if (!d.buildQueue || d.speed === undefined) return false
