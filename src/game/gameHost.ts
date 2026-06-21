@@ -89,7 +89,7 @@ export class GameHost {
     }
 
     this.inputHandler.onRightClick = (tileX, tileY) => {
-      this.lastSnapshot = this.server.handleAction({ type: 'right-click', x: tileX, y: tileY })
+      this.lastSnapshot = this.server.handleAction({ type: 'right-click', x: tileX, y: tileY, colonistId: this.selectedColonistId ?? undefined })
       this.emitUIUpdate()
     }
 

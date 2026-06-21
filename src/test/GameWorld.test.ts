@@ -339,6 +339,55 @@ describe('Colonist occupancy collision prevention', () => {
     }
   })
 
+  it('right-click with colonistId moves that specific colonist, not nearest', () => {
+    const alisa = game.colonists.find(c => c.id === 'col-1')!
+    const vera = game.colonists.find(c => c.id === 'col-3')!
+
+    alisa.position = { x: 5, y: 5 }
+    game.map.clearOccupantFor(alisa.id)
+    game.map.setOccupant(5, 5, alisa.id)
+
+    vera.position = { x: 16, y: 10 }
+    game.map.clearOccupantFor(vera.id)
+    game.map.setOccupant(16, 10, vera.id)
+
+    // Right-click near Alisa but with Vera selected — Vera should move
+    game.handleAction({ type: 'right-click', x: 6, y: 5, colonistId: 'col-3' })
+
+    expect(vera.state.phase).toBe('moving')
+    expect(alisa.state.phase).toBe('idle')
+  })
+
+  it('right-click without colonistId moves nearest colonist', () => {
+    const alisa = game.colonists.find(c => c.id === 'col-1')!
+    const vera = game.colonists.find(c => c.id === 'col-3')!
+
+    alisa.position = { x: 5, y: 5 }
+    game.map.clearOccupantFor(alisa.id)
+    game.map.setOccupant(5, 5, alisa.id)
+
+    vera.position = { x: 16, y: 10 }
+    game.map.clearOccupantFor(vera.id)
+    game.map.setOccupant(16, 10, vera.id)
+
+    // Right-click near Alisa, no selection — Alisa should move
+    game.handleAction({ type: 'right-click', x: 6, y: 5 })
+
+    expect(alisa.state.phase).toBe('moving')
+    expect(vera.state.phase).toBe('idle')
+  })
+
+  it('right-click with invalid colonistId falls back to nearest', () => {
+    const alisa = game.colonists.find(c => c.id === 'col-1')!
+    alisa.position = { x: 5, y: 5 }
+    game.map.clearOccupantFor(alisa.id)
+    game.map.setOccupant(5, 5, alisa.id)
+
+    game.handleAction({ type: 'right-click', x: 6, y: 5, colonistId: 'non-existent' })
+
+    expect(alisa.state.phase).toBe('moving')
+  })
+
   it('two colonists sharing a tile after updateMoving is impossible', () => {
     const a = game.colonists[0]
     const b = game.colonists[1]

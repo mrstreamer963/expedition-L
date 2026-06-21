@@ -150,16 +150,18 @@ export class GameWorld implements GameServer {
 
   handleAction(action: PlayerAction): ClientSnapshot {
     if (action.type === 'right-click') {
-      this.handleRightClick(action.x, action.y)
+      this.handleRightClick(action.x, action.y, action.colonistId)
     } else if (action.type === 'build') {
       this.addBuildTask(action.x, action.y, action.buildingType)
     }
     return this.generateSnapshot()
   }
 
-  private handleRightClick(x: number, y: number): void {
+  private handleRightClick(x: number, y: number, colonistId?: string): void {
     const target = { x, y }
-    const colonist = this.getNearestColonist(target)
+    const colonist = colonistId
+      ? this.state.colonists.find(c => c.id === colonistId) ?? this.getNearestColonist(target)
+      : this.getNearestColonist(target)
     if (colonist && this.state.map.isWalkable(x, y)) {
       if (colonist.state.phase !== 'idle') {
         colonist.transition({ phase: 'idle' })

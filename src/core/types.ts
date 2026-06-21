@@ -15,7 +15,7 @@ export interface GameServer {
 }
 
 export type PlayerAction =
-  | { type: 'right-click'; x: number; y: number }
+  | { type: 'right-click'; x: number; y: number; colonistId?: string }
   | { type: 'build'; x: number; y: number; buildingType: BuildingType }
 
 export interface ClientSnapshot {
