@@ -7,11 +7,19 @@ Save/load round-trip integrity and data validation — serializing game state to
 ## Requirements
 
 ### Requirement: WorldSerializer produces valid JSON structure
-toJSON SHALL produce a SaveData object with all required fields: version, timestamp, gameName, map, colonists, foods, beds, buildings, buildQueue, camera, speed.
+toJSON SHALL produce a SaveData object with all required fields: version, timestamp, gameName, map, colonists, foods, beds, buildings, buildQueue, camera, speed. Version SHALL be 3.
 
 #### Scenario: toJSON includes all sections
 - **WHEN** toJSON is called with a valid world state
 - **THEN** the result contains map, colonists, foods, beds, buildings, buildQueue, camera, speed fields
+
+#### Scenario: toJSON includes systemData
+- **WHEN** toJSON is called with system data from the pipeline
+- **THEN** the result contains a `systemData` field with system-persisted state
+
+#### Scenario: toJSON default systemData
+- **WHEN** toJSON is called without system data
+- **THEN** the result SHALL contain `systemData: {}` (empty object)
 
 ### Requirement: WorldSerializer validates data integrity
 validate SHALL return true only for complete and correct SaveData objects.
@@ -23,6 +31,10 @@ validate SHALL return true only for complete and correct SaveData objects.
 #### Scenario: Invalid data fails validation
 - **WHEN** validate receives null, non-object, wrong version, or missing fields
 - **THEN** returns false
+
+#### Scenario: Valid v3 data passes validation
+- **WHEN** validate receives a correctly structured SaveData with version 3 and `systemData` field
+- **THEN** returns true
 
 ### Requirement: WorldSerializer round-trip preserves state
 fromJSON(toJSON(world)) SHALL produce a world state equivalent to the original — same map dimensions, same number of colonists, foods, beds, buildings, same speed.
