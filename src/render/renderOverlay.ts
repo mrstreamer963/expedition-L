@@ -1,8 +1,7 @@
 import { TILE_WIDTH, TILE_HEIGHT } from '../game/world/tile'
 import { tileToScreen } from '../geometry/isoUtils'
-import { drawWall3D } from './drawWall3D'
-import { roundRect } from './roundRect'
-import { ClientSnapshot, BuildingType } from '../core'
+import { ClientSnapshot } from '../core'
+import { getBuildingVisual } from '../game/buildingVisuals'
 
 function canBuildAt(x: number, y: number, snap: ClientSnapshot): boolean {
   const tile = snap.map.tiles[y]?.[x]
@@ -18,7 +17,6 @@ export function renderBuildQueueGhosts(
   renderCtx: { offsetX: number; offsetY: number }
 ): void {
   if (snap.buildQueue.length === 0) return
-  const hh = TILE_HEIGHT / 2
 
   ctx.save()
   ctx.globalAlpha = 0.35
@@ -28,23 +26,8 @@ export function renderBuildQueueGhosts(
     const cx = sx + renderCtx.offsetX
     const cy = sy + renderCtx.offsetY
 
-    if (task.type === BuildingType.Wall) {
-      drawWall3D(ctx, cx, cy)
-    } else if (task.type === BuildingType.Bed) {
-      ctx.fillStyle = '#c49a6c'
-      roundRect(ctx, cx - 14, cy - hh - 10, 28, 16, 3)
-      ctx.fill()
-      ctx.fillStyle = '#d4b080'
-      roundRect(ctx, cx + 4, cy - hh - 12, 10, 8, 2)
-      ctx.fill()
-    } else if (task.type === BuildingType.Food) {
-      ctx.fillStyle = '#d44040'
-      ctx.beginPath()
-      ctx.arc(cx - 3, cy - hh - 4, 3, 0, Math.PI * 2)
-      ctx.arc(cx + 3, cy - hh - 5, 3, 0, Math.PI * 2)
-      ctx.arc(cx + 1, cy - hh - 2, 3, 0, Math.PI * 2)
-      ctx.fill()
-    }
+    const visual = getBuildingVisual(task.type)
+    if (visual) visual.renderGhost(ctx, cx, cy)
   }
 
   ctx.restore()
@@ -78,23 +61,8 @@ export function renderHighlight(
 
     ctx.save()
     ctx.globalAlpha = 0.35
-    if (renderCtx.buildMode === BuildingType.Wall) {
-      drawWall3D(ctx, cx, cy)
-    } else if (renderCtx.buildMode === BuildingType.Bed) {
-      ctx.fillStyle = '#c49a6c'
-      roundRect(ctx, cx - 14, cy - hh - 10, 28, 16, 3)
-      ctx.fill()
-      ctx.fillStyle = '#d4b080'
-      roundRect(ctx, cx + 4, cy - hh - 12, 10, 8, 2)
-      ctx.fill()
-    } else if (renderCtx.buildMode === BuildingType.Food) {
-      ctx.fillStyle = '#d44040'
-      ctx.beginPath()
-      ctx.arc(cx - 3, cy - hh - 4, 3, 0, Math.PI * 2)
-      ctx.arc(cx + 3, cy - hh - 5, 3, 0, Math.PI * 2)
-      ctx.arc(cx + 1, cy - hh - 2, 3, 0, Math.PI * 2)
-      ctx.fill()
-    }
+    const visual = getBuildingVisual(renderCtx.buildMode)
+    if (visual) visual.renderGhost(ctx, cx, cy)
     ctx.restore()
   } else {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
