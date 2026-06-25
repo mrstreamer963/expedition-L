@@ -78,7 +78,7 @@ export class GameWorld implements GameServer {
         { x: 8, y: 8 }, { x: 12, y: 8 }, { x: 8, y: 12 }, { x: 12, y: 12 }, { x: 10, y: 10 },
       ])
       this.placeInitialEntities(ecs, map, BuildingType.Bed, [
-        { x: 6, y: 6 }, { x: 14, y: 14 },
+        { x: 6, y: 6 }, //{ x: 14, y: 14 },
       ])
       this.state = new WorldState({
         ecs,
