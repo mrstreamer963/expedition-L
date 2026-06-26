@@ -1,7 +1,7 @@
 # Core Layer Migration to Rust/WASM
 
 **Date:** 2026-06-26  
-**Status:** Draft  
+**Status:** Implemented  
 **Project:** expedition-L
 
 ## Motivation
@@ -26,7 +26,7 @@ expedition-L/
 │   │   └── wasm.ts              ← импорт и инициализация WASM
 │   ├── App.tsx
 │   └── main.tsx
-├── vite.config.ts               ← кастомный плагин для wasm-pack
+├── vite.config.ts               ← vite-plugin-wasm-hmr для wasm-pack
 └── package.json
 ```
 
@@ -38,50 +38,53 @@ expedition-L/
    - Компилируется в WASM via `wasm-pack build`
 
 2. **WASM bridge (`src/core/wasm.ts`)**
-   - Инициализирует WASM модуль через `init()` из `crates/core/pkg/`
+   - Импортирует функции напрямую из `crates/core/pkg/core` (синхронно, без init)
    - Реэкспортирует функции для использования в React-компонентах
    - Предоставляет типобезопасный интерфейс
 
 3. **Vite plugin (`vite.config.ts`)**
-   - При `vite dev`: запускает `wasm-pack build --target web --dev` при старте
-   - Режим `dev` включает source maps и debug symbols для Rust
-   - Следит за изменениями `.rs` файлов через `chokidar`
-   - При изменении: перезапускает `wasm-pack build`, затем Vite делает full reload
+   - Использует `vite-plugin-wasm-hmr` — стандартный npm-пакет
+   - При `vite dev`: запускает `wasm-pack build --target bundler --dev` при старте
+   - Следит за изменениями `.rs` файлов и `Cargo.toml`
+   - При изменении: пересобирает wasm-pack, затем Vite делает reload модуля
+   - `vite-plugin-wasm` обеспечивает корректную обработку `.wasm` импортов
 
 ### Data flow
 
 ```
 React Component
     → import { getGreeting } from './core/wasm'
-        → wasm.ts вызывает init() и реэкспортирует getGreeting
-            → WASM модуль выполняет нативную функцию
-                → возвращает строку в JS
+        → wasm.ts импортирует из crates/core/pkg/core (синхронно)
+            → vite-plugin-wasm обрабатывает импорт .wasm
+                → WASM модуль выполняет нативную функцию
+                    → возвращает строку в JS
 ```
 
-### Vite plugin details (WasmPackPlugin)
+### Vite plugin details (vite-plugin-wasm-hmr)
+
+Используется стандартный пакет `vite-plugin-wasm-hmr` вместо кастомного плагина:
 
 ```ts
-// Псевдокод плагина
-WasmPackPlugin({
-  crateDir: 'crates/core',       // директория с Cargo.toml
-  outDir: 'crates/core/pkg',     // куда wasm-pack кладёт результат
-  watch: ['crates/core/src'],    // за какими файлами следить
-  profile: 'dev',                // wasm-pack profile
+wasmHmr({
+  crate: 'crates/core',          // путь к crate относительно корня Vite
+  buildOnStart: true,            // сборка при старте dev-сервера
+  // watch — автоматически, следит за src/**/*.rs и Cargo.toml
+  // default: outDir = "pkg", debounceMs = 300
 })
 ```
 
 Плагин:
-- Применяется на `configResolved` — проверяет установлен ли `wasm-pack`
-- На `configureServer` запускает `wasm-pack build --target web --dev`
-- Через `chokidar.watch()` следит за `crates/core/src/**/*.rs`
-- При изменении `.rs` файла: пересобирает WASM и отправляет Vite HMR full reload (`server.ws.send({ type: 'full-reload' })`)
-- На `build` (production сборка): запускает `wasm-pack build --target web --release`
+- На `configureServer` запускает `wasm-pack build --target bundler --dev`
+- Через `fs.watch()` (Node.js) следит за `crates/core/src/**/*.rs` и `Cargo.toml`
+- Debounce 300ms при изменениях
+- При изменении: пересобирает WASM, копирует staging → pkg, инвалидирует модули Vite
+- `vite-plugin-wasm` обеспечивает корректный импорт `.wasm` файлов
 
 ### Error handling
 
-- Если `wasm-pack` не установлен — бросать понятную ошибку при старте dev-сервера
-- Если Rust код не компилится — WASM перестаёт обновляться, ошибка выводится в консоль
-- `wasm.ts` экспортирует функции с fallback: если WASM не инициализировался, бросать ошибку
+- Если `wasm-pack` не установлен — vite-plugin-wasm-hmr показывает ошибку на старте
+- Если Rust код не компилится — wasm-pack выводит ошибку в консоль
+- WASM модуль импортируется синхронно через bundler — ошибка компиляции проявится как ошибка импорта модуля
 
 ### Testing
 
@@ -89,11 +92,11 @@ WasmPackPlugin({
 - WASM bridge (`wasm.ts`) тестируется как часть приложения
 - При сборке: `wasm-pack build` не запускается, если `cargo check` не проходит
 
-## Rollout
+## Rollout (выполнено)
 
-1. Создать Rust-крейт с текущей функциональностью
-2. Написать кастомный Vite-плагин
-3. Заменить `src/core/*` на `src/core/wasm.ts`
-4. Обновить импорты в `App.tsx`
-5. Проверить dev-сборку с автопересборкой
-6. Проверить production-сборку
+1. ✅ Создан Rust-крейт с get_greeting
+2. ✅ Установлен `vite-plugin-wasm-hmr` + `vite-plugin-wasm` (вместо кастомного плагина)
+3. ✅ Заменён `src/core/*` на bridge `src/core/wasm.ts`
+4. ✅ `App.tsx` продолжает импорт из `./core/api` — изменений не требуется
+5. ✅ Dev-сборка работает с автопересборкой при изменении .rs
+6. ⬜ Production-сборка — проверить
