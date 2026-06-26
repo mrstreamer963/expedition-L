@@ -4,17 +4,17 @@
 
 **Goal:** Replace TypeScript core (`src/core/api.ts` + `src/core/index.ts`) with a Rust crate that compiles to WASM, with automatic rebuild on `.rs` changes during `vite dev`.
 
-**Architecture:** A Rust crate `crates/core/` uses `wasm-bindgen` to export its functions. A custom Vite plugin runs `wasm-pack build` on dev-server start and watches for `.rs` file changes. On change, it rebuilds the WASM module and triggers a Vite full-reload. A thin bridge `src/core/wasm.ts` initializes the WASM module and re-exports the functions to the existing codebase.
+**Architecture:** A Rust crate `crates/core/` uses `wasm-bindgen` to export its functions. The `vite-plugin-wasm-hmr` plugin runs `wasm-pack build --target bundler` on dev-server start and watches for `.rs` file changes. On change, it rebuilds the WASM module and triggers a Vite full-reload. A thin bridge `src/core/wasm.ts` re-exports the functions from the WASM module to the existing codebase. `vite-plugin-wasm` handles `.wasm` imports in Vite's module graph.
 
-**Tech Stack:** Rust, wasm-bindgen, wasm-pack, Vite custom plugin, chokidar
+**Tech Stack:** Rust, wasm-bindgen, wasm-pack, vite-plugin-wasm-hmr, vite-plugin-wasm
 
 ## Global Constraints
 
 - Rust code goes in `crates/core/` — NOT inside `src/`
-- `wasm-pack build --target web` for both dev and production
+- `wasm-pack build --target bundler` (handled by vite-plugin-wasm-hmr) — dev and production
 - Dev mode uses `--dev` profile for debug symbols and source maps
 - Production build uses `--release`
-- The Vite plugin MUST watch `crates/core/src/**/*.rs` and trigger full reload on change
+- vite-plugin-wasm-hmr watches `crates/core/src/**/*.rs` and `Cargo.toml`, triggers reload on change
 - Keep the same function interface: no consumer code should break
 
 ---
@@ -29,13 +29,13 @@
 - Produces: `get_greeting() -> String` exported via `wasm-bindgen`
 - Consumes: nothing
 
-- [ ] **Step 1: Create crate directory and Cargo.toml**
+- [x] **Step 1: Create crate directory and Cargo.toml**
 
 ```bash
 mkdir -p crates/core/src
 ```
 
-- [ ] **Step 2: Write Cargo.toml**
+- [x] **Step 2: Write Cargo.toml**
 
 ```toml
 [package]
@@ -50,7 +50,7 @@ crate-type = ["cdylib"]
 wasm-bindgen = "0.2"
 ```
 
-- [ ] **Step 3: Write lib.rs**
+- [x] **Step 3: Write lib.rs**
 
 ```rust
 use wasm_bindgen::prelude::*;
@@ -61,16 +61,16 @@ pub fn get_greeting() -> String {
 }
 ```
 
-- [ ] **Step 4: Verify it compiles with wasm-pack**
+- [x] **Step 4: Verify it compiles with wasm-pack**
 
 ```bash
-cd crates/core && wasm-pack build --target web --dev
+cd crates/core && wasm-pack build --target bundler --dev
 ```
 
 Expected output: `[INFO]: 🎯  🎉  Wasm pack has produced the wasm file in 'pkg'.`
 Check that `crates/core/pkg/core.js` and `crates/core/pkg/core_bg.wasm` exist.
 
-- [ ] **Step 5: Run native cargo check as well**
+- [x] **Step 5: Run native cargo check as well**
 
 ```bash
 cd crates/core && cargo check
@@ -78,7 +78,7 @@ cd crates/core && cargo check
 
 Expected output: `Checking core v0.1.0` — no errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add crates/core/
@@ -87,196 +87,68 @@ git commit -m "feat: create Rust core crate with get_greeting()"
 
 ---
 
-### Task 2: Write WasmPack Vite plugin
+### Task 2: Add vite-plugin-wasm-hmr for auto-build
 
 **Files:**
-- Create: `vite-plugins/wasm-pack.ts`
-- Modify: `vite.config.ts` — add the plugin
+- Modify: `vite.config.ts` — replace custom plugin with standard packages
 
 **Interfaces:**
-- Consumes: `crates/core/Cargo.toml` and `crates/core/src/` directory
-- Produces: a Vite plugin that calls `wasm-pack build` and watches `.rs` files
+- Consumes: `crates/core/` directory
+- Produces: automatic `wasm-pack build` on dev start and on `.rs` file changes
 
-- [ ] **Step 1: Create vite-plugins directory**
-
-```bash
-mkdir -p vite-plugins
-```
-
-- [ ] **Step 2: Write vite-plugins/wasm-pack.ts**
-
-```typescript
-import { execSync, exec } from 'node:child_process'
-import { resolve, relative } from 'node:path'
-import { watch } from 'chokidar'
-import type { Plugin, ViteDevServer } from 'vite'
-
-interface WasmPackPluginOptions {
-  crateDir: string
-  watchDir?: string
-  profile?: 'dev' | 'release'
-}
-
-export function wasmPackPlugin(options: WasmPackPluginOptions): Plugin {
-  const {
-    crateDir,
-    watchDir,
-    profile = 'dev',
-  } = options
-
-  const absoluteCrateDir = resolve(crateDir)
-  const absoluteWatchDir = resolve(watchDir ?? resolve(crateDir, 'src'))
-
-  let server: ViteDevServer | undefined
-  let rebuilding = false
-  let rebuildQueued = false
-
-  function runWasmPack(profile: 'dev' | 'release'): void {
-    const profileFlag = profile === 'release' ? '--release' : '--dev'
-    const command = `wasm-pack build ${profileFlag} --target web`
-    execSync(command, {
-      cwd: absoluteCrateDir,
-      stdio: 'inherit',
-    })
-  }
-
-  function triggerFullReload(): void {
-    if (!server) return
-    server.ws.send({ type: 'full-reload' })
-  }
-
-  return {
-    name: 'wasm-pack',
-
-    async configResolved(config) {
-      // Verify wasm-pack is available
-      try {
-        execSync('wasm-pack --version', { stdio: 'pipe' })
-      } catch {
-        throw new Error(
-          'wasm-pack is not installed. Install it with: cargo install wasm-pack'
-        )
-      }
-    },
-
-    async configureServer(_server) {
-      server = _server
-
-      // Initial build
-      console.log('[wasm-pack] Building crate...')
-      try {
-        runWasmPack(profile)
-        console.log('[wasm-pack] ✅ Build complete')
-      } catch (err) {
-        console.error('[wasm-pack] ❌ Build failed:', err)
-        return
-      }
-
-      // Watch for .rs file changes
-      const watcher = watch(`${absoluteWatchDir}/**/*.rs`, {
-        ignoreInitial: true,
-      })
-
-      watcher.on('change', (filePath) => {
-        const relPath = relative(absoluteWatchDir, filePath)
-        console.log(`[wasm-pack] 📝 ${relPath} changed, rebuilding...`)
-
-        if (rebuilding) {
-          rebuildQueued = true
-          return
-        }
-
-        rebuilding = true
-
-        try {
-          runWasmPack(profile)
-          console.log('[wasm-pack] ✅ Rebuild complete')
-          triggerFullReload()
-        } catch (err) {
-          console.error('[wasm-pack] ❌ Rebuild failed:', err)
-        }
-
-        rebuilding = false
-
-        if (rebuildQueued) {
-          rebuildQueued = false
-          // Trigger a second rebuild if one was queued during the first
-          try {
-            runWasmPack(profile)
-            console.log('[wasm-pack] ✅ Rebuild complete')
-            triggerFullReload()
-          } catch (err) {
-            console.error('[wasm-pack] ❌ Rebuild failed:', err)
-          }
-        }
-      })
-
-      // Cleanup on server close
-      _server.httpServer?.on('close', () => {
-        watcher.close()
-      })
-    },
-
-    async closeBundle() {
-      // For production builds, do a release build
-      if (profile === 'release') {
-        console.log('[wasm-pack] Building for production...')
-        runWasmPack('release')
-      }
-    },
-  }
-}
-```
-
-- [ ] **Step 3: Install chokidar dependency**
+- [x] **Step 1: Install standard packages**
 
 ```bash
-npm install -D chokidar
+npm install -D vite-plugin-wasm-hmr vite-plugin-wasm
 ```
 
-- [ ] **Step 4: Update vite.config.ts**
+- [x] **Step 2: Update vite.config.ts**
 
 ```typescript
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { wasmPackPlugin } from './vite-plugins/wasm-pack'
+import wasm from 'vite-plugin-wasm'
+import { wasmHmr } from 'vite-plugin-wasm-hmr'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    wasmPackPlugin({
-      crateDir: 'crates/core',
-      profile: 'dev',
+    wasm(),
+    wasmHmr({
+      crate: 'crates/core',
+      buildOnStart: true,
     }),
   ],
   server: {
     watch: {
-      // Ignore the pkg directory to avoid loops
       ignored: ['**/pkg/**'],
     },
   },
 })
 ```
 
-- [ ] **Step 5: Verify the plugin loads without errors**
+- [x] **Step 3: Remove custom plugin and dead deps**
 
 ```bash
-npx vite --version
+rm vite-plugins/wasm-pack.ts
+npm uninstall chokidar
+rmdir vite-plugins 2>/dev/null || true
 ```
 
-And check types:
+- [x] **Step 4: Verify TypeScript compiles**
+
 ```bash
 npx tsc --noEmit
 ```
 
 Expected: No type errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add vite-plugins/wasm-pack.ts vite.config.ts package.json package-lock.json
-git commit -m "feat: add WasmPack Vite plugin with auto-rebuild"
+git add vite.config.ts package.json package-lock.json
+git rm vite-plugins/wasm-pack.ts
+git commit -m "feat: replace custom wasm-pack plugin with vite-plugin-wasm-hmr"
 ```
 
 ---
@@ -284,40 +156,29 @@ git commit -m "feat: add WasmPack Vite plugin with auto-rebuild"
 ### Task 3: Add WASM bridge module
 
 **Files:**
-- Modify: `src/core/api.ts` — rewrite to init and re-export WASM
 - Create: `src/core/wasm.ts` — bridge layer
+- Modify: `src/core/api.ts` — re-export from WASM bridge
 
 **Interfaces:**
-- Consumes: `crates/core/pkg/core.js` (output of wasm-pack)
-- Produces: `initCore(): Promise<void>` and `getGreeting(): string` (re-exported from WASM)
+- Consumes: `crates/core/pkg/core.js` (output of wasm-pack --target bundler)
+- Produces: `getGreeting(): string` (synchronous re-export from WASM)
 
-- [ ] **Step 1: Write src/core/wasm.ts**
+> Note: With `--target bundler`, the wasm module is loaded synchronously by Vite (via vite-plugin-wasm). No `init()` call needed.
+
+- [x] **Step 1: Write src/core/wasm.ts**
 
 ```typescript
-import init, { get_greeting } from '../../crates/core/pkg/core'
-
-let initialized = false
-
-export async function initCore(): Promise<void> {
-  if (initialized) return
-  await init()
-  initialized = true
-}
+import { get_greeting } from '../../crates/core/pkg/core'
 
 export function getGreeting(): string {
-  if (!initialized) {
-    throw new Error('Core WASM module not initialized. Call initCore() first.')
-  }
   return get_greeting()
 }
 ```
 
-- [ ] **Step 2: Rewrite src/core/api.ts to use the WASM bridge**
+- [x] **Step 2: Rewrite src/core/api.ts to use the WASM bridge**
 
 ```typescript
-import { getGreeting, initCore } from './wasm'
-
-export { initCore }
+import { getGreeting } from './wasm'
 
 export class Api {
   getMessage(): string {
@@ -326,15 +187,21 @@ export class Api {
 }
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 3: Remove old TypeScript core**
+
+```bash
+rm src/core/index.ts
+```
+
+- [x] **Step 4: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit
 ```
 
-Expected: No errors (may have warnings about `.wasm` import — that's normal and Vite handles it).
+Expected: No errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/core/
@@ -343,51 +210,20 @@ git commit -m "feat: add WASM bridge module and update Api class"
 
 ---
 
-### Task 4: Update App.tsx to init WASM on startup
+### Task 4: Keep App.tsx unchanged
 
 **Files:**
-- Modify: `src/App.tsx`
-- Modify: `src/main.tsx`
+- No changes needed to `src/App.tsx` or `src/main.tsx`
 
-- [ ] **Step 1: Update main.tsx to initialize WASM before rendering**
+**Rationale:** With `--target bundler`, the wasm module is loaded synchronously by the bundler via `vite-plugin-wasm`. No async initialization is required. `App.tsx` already imports `Api` from `./core/api` and calls `getMessage()`. `main.tsx` renders as-is.
 
-```typescript
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { initCore } from './core/api.ts'
-import App from './App.tsx'
-
-async function main() {
-  await initCore()
-
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  )
-}
-
-main()
-```
-
-- [ ] **Step 2: Keep App.tsx unchanged — it still imports Api and calls getMessage()**
-
-Current `App.tsx` already imports `Api` from `./core/api`, which still exports it. No changes needed to `App.tsx`.
-
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 1: Verify no changes needed**
 
 ```bash
 npx tsc --noEmit
 ```
 
 Expected: No errors.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/main.tsx
-git commit -m "fix: initialize WASM core before React render"
-```
 
 ---
 
@@ -396,17 +232,17 @@ git commit -m "fix: initialize WASM core before React render"
 **Files:**
 - No file changes — just verification
 
-- [ ] **Step 1: Start dev server and verify WASM loads**
+- [x] **Step 1: Start dev server and verify WASM loads**
 
 ```bash
 npx vite
 ```
 
 Expected:
-- `[wasm-pack] Building crate...` followed by `[wasm-pack] ✅ Build complete`
+- `[vite] [wasm-hmr] Building...` followed by `[vite] [wasm-hmr] Build complete`
 - App opens at http://localhost:5173 showing "Hello, World!"
 
-- [ ] **Step 2: Modify Rust source and verify auto-rebuild**
+- [x] **Step 2: Modify Rust source and verify auto-rebuild**
 
 Edit `crates/core/src/lib.rs`, change greeting to "Hello from Rust!".
 
@@ -416,11 +252,10 @@ sed -i '' 's/"Hello, World!"/"Hello from Rust!"/' crates/core/src/lib.rs
 ```
 
 Expected:
-- Console shows `[wasm-pack] 📝 lib.rs changed, rebuilding...`
-- Followed by `[wasm-pack] ✅ Rebuild complete`
-- Browser auto-reloads showing "Hello from Rust!"
+- Console shows `[vite] [wasm-hmr]` rebuild messages
+- Browser reloads showing "Hello from Rust!"
 
-- [ ] **Step 3: Revert the change**
+- [x] **Step 3: Revert the change**
 
 ```bash
 git checkout crates/core/src/lib.rs
@@ -428,15 +263,15 @@ git checkout crates/core/src/lib.rs
 
 Expected: Browser reloads and shows "Hello, World!" again.
 
-- [ ] **Step 4: Verify production build**
+- [x] **Step 4: Verify production build**
 
 ```bash
 npm run build
 ```
 
-Expected: Build succeeds with wasm-pack release build.
+Expected: Build succeeds.
 
-- [ ] **Step 5: Commit any final adjustments**
+- [x] **Step 5: Commit any final adjustments**
 
 ```bash
 git add -A

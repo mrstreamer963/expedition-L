@@ -1,19 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { wasmPackPlugin } from './vite-plugins/wasm-pack'
+import wasm from 'vite-plugin-wasm'
+import { wasmHmr } from 'vite-plugin-wasm-hmr'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    wasmPackPlugin({
-      crateDir: 'crates/core',
-      profile: 'dev',
+    wasm(),
+    wasmHmr({
+      crate: 'crates/core',
+      buildOnStart: true,
     }),
   ],
   server: {
     watch: {
-      // Ignore the pkg directory to avoid loops
       ignored: ['**/pkg/**'],
     },
   },

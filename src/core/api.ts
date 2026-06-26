@@ -1,4 +1,4 @@
-import { getGreeting } from './index'
+import { getGreeting } from './wasm'
 
 export class Api {
   getMessage(): string {
