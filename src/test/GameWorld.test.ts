@@ -75,7 +75,7 @@ describe('JobDispatcher status-driven job selection', () => {
 
   it('chooses sleep when only tired status is active', () => {
     const c = game.colonists[0]
-    c.position = { x: 14, y: 14 }
+    c.position = { x: 6, y: 6 }
     c.needs = { hunger: 80, sleep: 20 }
     c.statuses.add('tired')
     assignJob(c.id)
@@ -114,7 +114,7 @@ describe('JobDispatcher status-driven job selection', () => {
 
   it('falls back to sleep when food is not available but bed is', () => {
     const c = game.colonists[0]
-    c.position = { x: 14, y: 14 }
+    c.position = { x: 6, y: 6 }
     c.needs = { hunger: 0, sleep: 0 }
     for (const eid of query(game.state.ecs, [Edible])) removeEntity(game.state.ecs, eid)
     c.statuses.add('hungry')

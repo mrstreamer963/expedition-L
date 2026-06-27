@@ -83,15 +83,15 @@ describe('Colonist FSM lifecycle', () => {
 
   it('1.3 colonist sleeps in bed end-to-end', () => {
     const c = game.colonists[1]
-    c.position = { x: 14, y: 14 }
+    c.position = { x: 6, y: 6 }
     c.needs = { hunger: 80, sleep: 10 }
     c.statuses.add('tired')
     game.map.clearOccupantFor(c.id)
-    game.map.setOccupant(14, 14, c.id)
+    game.map.setOccupant(6, 6, c.id)
 
     for (const eid of query(game.state.ecs, [Edible])) removeEntity(game.state.ecs, eid)
     for (const eid of query(game.state.ecs, [Sleepable])) {
-      if (Position.x[eid] !== 14 || Position.y[eid] !== 14) removeEntity(game.state.ecs, eid)
+      if (Position.x[eid] !== 6 || Position.y[eid] !== 6) removeEntity(game.state.ecs, eid)
     }
 
     game.update(1)
@@ -102,7 +102,7 @@ describe('Colonist FSM lifecycle', () => {
 
     game.update(10)
     expect(c.needs.sleep).toBeGreaterThan(60)
-    expect(game.map.getOccupant(14, 14)).toBeNull()
+    expect(game.map.getOccupant(6, 6)).toBeNull()
   })
 
   it('1.4 colonist builds a wall end-to-end', () => {
